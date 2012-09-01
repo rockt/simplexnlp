@@ -54,9 +54,13 @@ abstract class Relation(entities:Entity*) extends Annotation
 case class Mutation(start:Int, end:Int) extends Entity
 case class Gene(start:Int, end:Int) extends Entity
 case class Disease(start:Int, end:Int) extends Entity
+case class Drug(start:Int, end:Int) extends Entity
 
 case class PPI(a:Gene, b:Gene) extends Relation(a, b) {
   override def toString:String = "PPI: " + a + " - " + b
+}
+case class DDI(a:Drug, b:Drug) extends Relation(a, b) {
+  override def toString:String = "DDI: " + a + " - " + b
 }
 
 class DummyAnnotator extends Component {
