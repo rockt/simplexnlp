@@ -42,9 +42,16 @@ trait Span extends Annotation {
   assert(end - start >= 0, "Span must end after its beginning!")
 }
 
+trait NonOverlappingSpan extends Span with Ordered[NonOverlappingSpan] {
+  override def compare(that:NonOverlappingSpan):Int = {
+    assert((this.start < that.start || this.start > that.start) && (this.end <= that.start || this.start >= that.end), this + " overlaps " + that)
+    this.start - that.start
+  }
+}
+
 //TODO: sentence should contain a list of tokens
-case class Sentence(start:Int, end:Int) extends Span
-case class Token(start:Int, end:Int) extends Span
+case class Sentence(start:Int, end:Int) extends NonOverlappingSpan
+case class Token(start:Int, end:Int) extends NonOverlappingSpan
 
 trait Entity extends Span
 abstract class Relation(entities:Entity*) extends Annotation
@@ -63,26 +70,27 @@ case class DDI(a:Drug, b:Drug) extends Relation(a, b) {
   override def toString:String = "DDI: " + a + " - " + b
 }
 
-class DummyAnnotator extends Component {
+class DummyGeneAnnotator extends Component {
   override def process(text: Document):Document = {
     text.add(new Gene(0,0))
     text
   }
 }
 
-class AnotherDummyAnnotator extends Component {
-  override def initialize() {println("Disease tagger initialized!")}
+class DummyDiseaseAnnotator extends Component {
+  override def initialize() {println("Disease tagger initialized.")}
+  override def preHook() {println("Start tagging disease...")}
   override def process(text: Document):Document = {
     text.add(new Disease(2,3))
     text
   }
-  override def postHook() {println("Disease tagger finished!")}
+  override def postHook() {println("End tagging disease.")}
 }
 
 object Prototype extends App {
   implicit def componentToPipeline(component:Component):Pipeline = new Pipeline(component)
-  val c1 = new DummyAnnotator
-  val c2 = new AnotherDummyAnnotator
+  val c1 = new DummyGeneAnnotator
+  val c2 = new DummyDiseaseAnnotator
   val doc = new Document("This is a sample text.")
   val pipeline:Pipeline = c1 ++ c2 ++ c1
   val result = pipeline.process(doc)
@@ -91,4 +99,10 @@ object Prototype extends App {
   println(doc.text)
   println(result)
   println(relation)
+  val s1 = new Sentence(0,3)
+  val s2 = new Sentence(3,4)
+  val s3 = new Sentence(0,3)
+  println(s1 < s2)
+  println(s2 < s1)
+  println(s1 == s3)
 }
