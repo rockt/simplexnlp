@@ -88,7 +88,7 @@ class DummyDiseaseAnnotator extends Component {
 }
 
 object Prototype extends App {
-  implicit def componentToPipeline(component:Component):Pipeline = new Pipeline(component)
+  implicit def componentToPipeline(component:Component):Pipeline = new Pipeline(component) //TODO: find a better place for this conversion
   val c1 = new DummyGeneAnnotator
   val c2 = new DummyDiseaseAnnotator
   val doc = new Document("This is a sample text.")
