@@ -1,5 +1,6 @@
 package hexnlp
 
+
 import collection.mutable.ListBuffer
 
 //TODO: annotation should be connected to a document!
@@ -103,6 +104,5 @@ object Prototype extends App {
   val s2 = new Sentence(3,4)
   val s3 = new Sentence(0,3)
   println(s1 < s2)
-  println(s2 < s1)
-  println(s1 == s3)
+  println(s2 <= s1)
 }
