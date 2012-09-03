@@ -2,14 +2,20 @@ package hexnlp
 
 
 import collection.mutable.ListBuffer
+import collection.mutable.HashSet
 
 //TODO: annotation should be connected to a document!
-trait Annotation
+trait Annotation {
+  //var doc:Document = _ //TODO: change doc into a constructor parameter -> an annotation without a doc makes no sense!
+  //def add(doc:Document) = doc.add(this)
+  //def delete = doc.remove(this)
+
+}
 
 class Document(val text:String) {
-  var annotations = new ListBuffer[Annotation]
-  def add(a:Annotation) = annotations.append(a)
-  //TODO: def remove(a:Annotation)
+  var annotations = new HashSet[Annotation]
+  def add(a:Annotation) = annotations.add(a)
+  def remove(a:Annotation) = annotations.remove(a)
   override def toString = annotations.toString()
 }
 
@@ -41,6 +47,11 @@ trait Span extends Annotation {
   val start:Int
   val end:Int
   assert(end - start >= 0, "Span must end after its beginning!")
+  //TODO: def text = doc.text.substring(start, end+1)
+  //TODO: def append
+  //TODO: def prepend
+  //TODO: def trimStart
+  //TODO: def trimEnd
 }
 
 trait NonOverlappingSpan extends Span with Ordered[NonOverlappingSpan] {
@@ -61,7 +72,7 @@ abstract class Relation(entities:Entity*) extends Annotation
 //Example NLP pipeline
 case class Mutation(start:Int, end:Int) extends Entity
 case class Gene(start:Int, end:Int) extends Entity
-case class Disease(start:Int, end:Int) extends Entity
+case class Phenotype(start:Int, end:Int) extends Entity
 case class Drug(start:Int, end:Int) extends Entity
 
 case class PPI(a:Gene, b:Gene) extends Relation(a, b) {
@@ -70,22 +81,26 @@ case class PPI(a:Gene, b:Gene) extends Relation(a, b) {
 case class DDI(a:Drug, b:Drug) extends Relation(a, b) {
   override def toString:String = "DDI: " + a + " - " + b
 }
+case class GPI(a:Gene, b:Phenotype) extends Relation(a, b) {
+  override def toString:String = "GPI: " + a + " - " + b
+}
+
 
 class DummyGeneAnnotator extends Component {
-  override def process(text: Document):Document = {
-    text.add(new Gene(0,0))
-    text
+  override def process(doc: Document):Document = {
+    doc.add(new Gene(0,0))
+    doc
   }
 }
 
 class DummyDiseaseAnnotator extends Component {
-  override def initialize() {println("Disease tagger initialized.")}
-  override def preHook() {println("Start tagging disease...")}
-  override def process(text: Document):Document = {
-    text.add(new Disease(2,3))
-    text
+  override def initialize() { println("Phenotype tagger initialized.") }
+  override def preHook() { println("Start tagging disease...") }
+  override def process(doc: Document):Document = {
+    doc.add(new Phenotype(2,3))
+    doc
   }
-  override def postHook() {println("End tagging disease.")}
+  override def postHook() { println("End tagging disease.") }
 }
 
 object Prototype extends App {
@@ -105,4 +120,10 @@ object Prototype extends App {
   val s3 = new Sentence(0,3)
   println(s1 < s2)
   println(s2 <= s1)
+  result.annotations.foreach((a:Annotation) =>
+    a match {
+      //case s:Span => println(s.text)
+      case _ => //
+    }
+  )
 }
