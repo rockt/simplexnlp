@@ -3,6 +3,7 @@ package hexnlp
 
 import collection.mutable.ListBuffer
 import collection.mutable.HashSet
+import edu.uchsc.ccp.nlp.ei.mutation.MutationFinder
 
 //TODO: annotation should be connected to a document!
 trait Annotation {
@@ -103,12 +104,30 @@ class DummyDiseaseAnnotator extends Component {
   override def postHook() { println("End tagging disease.") }
 }
 
+class MutationAnnotator extends Component {
+  var extractor:MutationFinder  = _
+  override def initialize() {
+    extractor = new MutationFinder("./resources/mutationFinder/regex.txt")
+  }
+
+  override def process(doc:Document):Document = {
+    import scala.collection.JavaConversions._
+    val mutations = extractor.extractMutations(doc.text)
+    for (mutation <- mutations.keySet(); span <- mutations.get(mutation)) {
+      println((span.asInstanceOf[Array[Int]](0),span.asInstanceOf[Array[Int]](1)))
+    }
+
+    doc
+  }
+}
+
 object Prototype extends App {
   implicit def componentToPipeline(component:Component):Pipeline = new Pipeline(component) //TODO: find a better place for this conversion
   val c1 = new DummyGeneAnnotator
   val c2 = new DummyDiseaseAnnotator
-  val doc = new Document("This is a sample text.")
-  val pipeline:Pipeline = c1 ++ c2 ++ c1
+  val m = new MutationAnnotator
+  val doc = new Document("This disease is caused by the A54T substitution in gene XYZ.")
+  val pipeline:Pipeline = c1 ++ c2 ++ c1 ++ m
   val result = pipeline.process(doc)
   val relation = PPI(Gene(1,2), Gene(2,3))
   println(pipeline)
