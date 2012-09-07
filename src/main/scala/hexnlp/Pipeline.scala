@@ -7,15 +7,22 @@ import edu.uchsc.ccp.nlp.ei.mutation.MutationFinder
 trait Annotation {
   var doc:Document = _
   def add(doc:Document) = doc.add(this)
-  def remove = doc.remove(this)
+  def remove() = doc.remove(this)
 }
 
+// a mutable document with annotations
 class Document(val text:String) {
   var annotations = new HashSet[Annotation]
-  def add(a:Annotation) = annotations.add(a)
-  def +(a:Annotation) = annotations.add(a)
-  def remove(a:Annotation) = annotations.remove(a)
-  def -(a:Annotation) = annotations.remove(a)
+  def add(a:Annotation) = this + a
+  def +(a:Annotation) = {
+    annotations.add(a)
+    a.doc = this
+  }
+  def remove(a:Annotation) = this - a
+  def -(a:Annotation) = {
+    annotations.remove(a)
+    a.doc = null
+  }
   override def toString = annotations.toString()
 }
 
@@ -47,12 +54,14 @@ class Pipeline(cs:Component*) {
 trait Span extends Annotation {
   val start:Int
   val end:Int
-  assert(end - start >= 0, "Span must end after its beginning!")
-  //TODO: def doc = doc.doc.substring(start, end+1)
+  assert(end - start >= 0, "A span must end after its beginning!")
   //TODO: def append
   //TODO: def prepend
   //TODO: def trimStart
   //TODO: def trimEnd
+  def text = doc.text.substring(start, end)
+  def length = text.length
+  override def toString = this.getClass.toString.substring(this.getClass.toString.lastIndexOf('.')+1) + "[" + start + "-" + end + "]:" + text
 }
 
 trait NonOverlappingSpan extends Span with Ordered[NonOverlappingSpan] {
@@ -60,6 +69,11 @@ trait NonOverlappingSpan extends Span with Ordered[NonOverlappingSpan] {
     assert((this.start < that.start || this.start > that.start) && (this.end <= that.start || this.start >= that.end), this + " overlaps " + that)
     this.start - that.start
   }
+}
+
+trait ChildAnnotation extends Annotation {
+  var parent:Annotation = _
+  //TODO
 }
 
 //TODO: sentence should contain a list of tokens
