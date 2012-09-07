@@ -10,6 +10,8 @@ object Util {
     System.setErr(temp)
   }
 
+  def getClassName(a:Any) = a.getClass.toString.substring(a.getClass.toString.lastIndexOf('.') + 1)
+
   //TODO: use currying if applicable
   //TODO: getAnnotationsWithin(start: Int, end: Int)(annotations:Iterable[Span])
   //TODO: getAnnotationsStartingAt(start: Int)

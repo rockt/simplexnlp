@@ -5,34 +5,36 @@ import edu.uchsc.ccp.nlp.ei.mutation.MutationFinder
 import hexnlp.Util._
 import hexnlp.Implicits._
 
+//something that has all kinds of children
 trait ParentOf[C <: Child] {
   val children = new ListBuffer[C]
-  def +(child:C) = {
+  def add(child:C) = {
     children += child
     child.parent = this
   }
-  def add(child:C) = this + child
-  def -(child:C) = {
+  def remove(child:C) = {
     children - child
     child.parent = null
   }
-  def remove(child:C) = this - child
-  def filteredChildren[T](implicit mf:Manifest[T]) : List[T] = {
+  def +(child:C) = add(child)
+  def -(child:C) = remove(child)
+  def filteredChildren[T](implicit mf:Manifest[T]):List[T] = {
      children.collect({
        case t if mf.erasure.isAssignableFrom(t.getClass) => t
      }).asInstanceOf[ListBuffer[T]].toList
    }
 }
 
+//something that has a parent
 trait Child {
   var parent:Any = _
 }
 
 trait Annotation extends Child {
-  //for now... but it is a hack!
   def doc = parent.asInstanceOf[Document] //just an alias
   //gathers all annotations recursively
   def annotations:List[Annotation] = {
+    //if this is a parent, collect all children
     if (this.isInstanceOf[ParentOf[Annotation]]) {
       val buffer = new ListBuffer[Annotation]
       buffer.append(this)
@@ -45,14 +47,15 @@ trait Annotation extends Child {
   }
 }
 
-//a mutable document with annotations
 //TODO: every document needs an ID
+//a document with mutable annotations
 class Document(val text:String) extends Annotation with ParentOf[Annotation] {
   override def doc = this
   def sentences = filteredChildren[Sentence]
 }
 
 //TODO: implement a Parameter class for components
+//a NLP component
 abstract class Component {
   def initialize(){}
   def process(doc:Document) //a concrete component needs to override this method
@@ -61,6 +64,7 @@ abstract class Component {
   initialize()
 }
 
+//a chain of NLP components
 class Pipeline(cs:Component*) {
   val components = new ListBuffer[Component]
   components.appendAll(cs) //FIXME: that is silly
@@ -73,7 +77,7 @@ class Pipeline(cs:Component*) {
       c.postHook()
       })
   }
-  override def toString = components.toString()
+  override def toString = components.map(getClassName(_)).mkString("*Input* => ", " -> ", " => *Output*")
 }
 
 trait Span extends Annotation {
@@ -86,7 +90,7 @@ trait Span extends Annotation {
   //TODO: def trimEnd
   def text = doc.text.substring(start, end)
   def length = text.length
-  override def toString = this.getClass.toString.substring(this.getClass.toString.lastIndexOf('.')+1) + "[" + start + "-" + end + "]: " + text
+  override def toString = getClassName(this) + "[" + start + "-" + end + "]: " + text
 }
 
 trait NonOverlappingSpan extends Span with Ordered[NonOverlappingSpan] {
