@@ -5,7 +5,6 @@ import collection.mutable.ListBuffer
 import collection.mutable.HashSet
 import edu.uchsc.ccp.nlp.ei.mutation.MutationFinder
 
-//TODO: annotation should be connected to a document!
 trait Annotation {
   var doc:Document = _
   def add(doc:Document) = doc.add(this)
@@ -21,6 +20,7 @@ class Document(val text:String) {
   override def toString = annotations.toString()
 }
 
+//TODO: implement a Parameter class for components
 abstract class Component {
   def initialize(){}
   def process(doc:Document) //a concrete component needs to override this method
@@ -70,11 +70,10 @@ case class Token(start:Int, end:Int) extends NonOverlappingSpan
 trait Entity extends Span
 abstract class Relation(entities:Entity*) extends Annotation
 
-
 //Example NLP pipeline
 case class Mutation(start:Int, end:Int) extends Entity
 case class Gene(start:Int, end:Int) extends Entity
-case class Phenotype(start:Int, end:Int) extends Entity
+case class Disease(start:Int, end:Int) extends Entity
 case class Drug(start:Int, end:Int) extends Entity
 
 case class PPI(a:Gene, b:Gene) extends Relation(a, b) {
@@ -83,20 +82,15 @@ case class PPI(a:Gene, b:Gene) extends Relation(a, b) {
 case class DDI(a:Drug, b:Drug) extends Relation(a, b) {
   override def toString:String = "DDI: " + a + " - " + b
 }
-case class GPI(a:Gene, b:Phenotype) extends Relation(a, b) {
-  override def toString:String = "GPI: " + a + " - " + b
-}
-
-
-class DummyGeneAnnotator extends Component {
-  override def process(doc: Document) = doc + new Gene(0,0)
+case class MutationDiseaseRelation(m:Mutation, d:Disease) extends Relation(m, d) {
+  override def toString:String = "MutationDiseaseRelation: " + m + " - " + d
 }
 
 class DummyDiseaseAnnotator extends Component {
-  override def initialize() { println("Phenotype tagger initialized.") }
-  override def preHook() { println("Start tagging disease...") }
-  override def process(doc: Document) = doc + new Phenotype(2,3)
-  override def postHook() { println("End tagging disease.") }
+  override def initialize() { println("Disease tagger initialized.") }
+  override def preHook() { println("Start tagging diseases...") }
+  override def process(doc: Document) = doc + new Disease(2,3)
+  override def postHook() { println("End tagging diseases.") }
 }
 
 class MutationAnnotator extends Component {
@@ -116,22 +110,16 @@ class MutationAnnotator extends Component {
 
 object Prototype extends App {
   implicit def componentToPipeline(component:Component):Pipeline = new Pipeline(component) //TODO: find a better place for this conversion
-  val c1 = new DummyGeneAnnotator
-  val c2 = new DummyDiseaseAnnotator
-  val m = new MutationAnnotator
+  val c1 = new DummyDiseaseAnnotator
+  val c2 = new MutationAnnotator
   val doc = new Document("This disease is caused by the A54T substitution in gene XYZ.")
-  val pipeline:Pipeline = c1 ++ c2 ++ c1 ++ m
+  val pipeline = c1 ++ c2 ++ c1
   val result = pipeline.process(doc)
-  val relation = PPI(Gene(1,2), Gene(2,3))
-  println(pipeline)
-  println(doc.text)
-  println(result)
-  println(relation)
-  val s1 = new Sentence(0,3)
-  val s2 = new Sentence(3,4)
-  val s3 = new Sentence(0,3)
-  println(s1 < s2)
-  println(s2 <= s1)
+  println("Pipeline:\t" + pipeline)
+  println("Text:\t\t" + doc.text)
+  println("Annotations:" + result)
+
+  //TODO: only print Mutations
   result.foreach((a:Annotation) =>
     a match {
       //case s:Span => println(s.doc)
