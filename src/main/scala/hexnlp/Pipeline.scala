@@ -1,6 +1,5 @@
 package hexnlp
 
-
 import collection.mutable.ListBuffer
 import collection.mutable.HashSet
 import edu.uchsc.ccp.nlp.ei.mutation.MutationFinder
@@ -87,10 +86,11 @@ case class MutationDiseaseRelation(m:Mutation, d:Disease) extends Relation(m, d)
 }
 
 class DummyDiseaseAnnotator extends Component {
-  override def initialize() { println("Disease tagger initialized.") }
-  override def preHook() { println("Start tagging diseases...") }
-  override def process(doc: Document) = doc + new Disease(2,3)
-  override def postHook() { println("End tagging diseases.") }
+  val DISEASE = "disease"
+  override def process(doc: Document) = {
+    val result = doc.text.indexOf(DISEASE)
+    if (result >= 0) doc + new Disease(result, result + DISEASE.length)
+  }
 }
 
 class MutationAnnotator extends Component {
@@ -102,9 +102,16 @@ class MutationAnnotator extends Component {
   override def process(doc:Document) = {
     import scala.collection.JavaConversions._
     val mutations = extractor.extractMutations(doc.text)
-    for (mutation <- mutations.keySet(); span <- mutations.get(mutation)) {
-      println((span.asInstanceOf[Array[Int]](0),span.asInstanceOf[Array[Int]](1)))
+    for (mutation <- mutations.keySet(); tuple <- mutations.get(mutation)) {
+      val span = tuple.asInstanceOf[Array[Int]]
+      doc + new Mutation(span(0), span(1))
     }
+  }
+}
+
+class CoOccurrenceAnnotator extends Component {
+  override def process(doc:Document) = {
+    //TODO
   }
 }
 
