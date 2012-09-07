@@ -7,22 +7,23 @@ import edu.uchsc.ccp.nlp.ei.mutation.MutationFinder
 
 //TODO: annotation should be connected to a document!
 trait Annotation {
-  //var doc:Document = _ //TODO: change doc into a constructor parameter -> an annotation without a doc makes no sense!
-  //def add(doc:Document) = doc.add(this)
-  //def delete = doc.remove(this)
-
+  var doc:Document = _
+  def add(doc:Document) = doc.add(this)
+  def remove = doc.remove(this)
 }
 
 class Document(val text:String) {
   var annotations = new HashSet[Annotation]
   def add(a:Annotation) = annotations.add(a)
+  def +(a:Annotation) = annotations.add(a)
   def remove(a:Annotation) = annotations.remove(a)
+  def -(a:Annotation) = annotations.remove(a)
   override def toString = annotations.toString()
 }
 
 abstract class Component {
   def initialize(){}
-  def process(text:Document):Document //a concrete component needs to override this method
+  def process(doc:Document) //a concrete component needs to override this method
   def preHook(){}
   def postHook(){}
   initialize()
@@ -33,13 +34,13 @@ class Pipeline(cs:Component*) {
   components.appendAll(cs)
   def ++(that:Pipeline) = new Pipeline((this.components ++ that.components): _*)
   //TODO: def |(that:Pipeline)
-  def process(text:Document):Document = {
+  def process(doc:Document) = {
     components.foreach((c:Component) => {
       c.preHook()
-      c.process(text)
+      c.process(doc)
       c.postHook()
       })
-    text
+    doc.annotations
   }
   override def toString = components.toString()
 }
@@ -48,7 +49,7 @@ trait Span extends Annotation {
   val start:Int
   val end:Int
   assert(end - start >= 0, "Span must end after its beginning!")
-  //TODO: def text = doc.text.substring(start, end+1)
+  //TODO: def doc = doc.doc.substring(start, end+1)
   //TODO: def append
   //TODO: def prepend
   //TODO: def trimStart
@@ -88,19 +89,13 @@ case class GPI(a:Gene, b:Phenotype) extends Relation(a, b) {
 
 
 class DummyGeneAnnotator extends Component {
-  override def process(doc: Document):Document = {
-    doc.add(new Gene(0,0))
-    doc
-  }
+  override def process(doc: Document) = doc + new Gene(0,0)
 }
 
 class DummyDiseaseAnnotator extends Component {
   override def initialize() { println("Phenotype tagger initialized.") }
   override def preHook() { println("Start tagging disease...") }
-  override def process(doc: Document):Document = {
-    doc.add(new Phenotype(2,3))
-    doc
-  }
+  override def process(doc: Document) = doc + new Phenotype(2,3)
   override def postHook() { println("End tagging disease.") }
 }
 
@@ -110,14 +105,12 @@ class MutationAnnotator extends Component {
     extractor = new MutationFinder("./resources/mutationFinder/regex.txt")
   }
 
-  override def process(doc:Document):Document = {
+  override def process(doc:Document) = {
     import scala.collection.JavaConversions._
     val mutations = extractor.extractMutations(doc.text)
     for (mutation <- mutations.keySet(); span <- mutations.get(mutation)) {
       println((span.asInstanceOf[Array[Int]](0),span.asInstanceOf[Array[Int]](1)))
     }
-
-    doc
   }
 }
 
@@ -139,9 +132,9 @@ object Prototype extends App {
   val s3 = new Sentence(0,3)
   println(s1 < s2)
   println(s2 <= s1)
-  result.annotations.foreach((a:Annotation) =>
+  result.foreach((a:Annotation) =>
     a match {
-      //case s:Span => println(s.text)
+      //case s:Span => println(s.doc)
       case _ => //
     }
   )
