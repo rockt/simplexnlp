@@ -3,6 +3,8 @@ package hexnlp
 import collection.mutable.ListBuffer
 import collection.mutable.HashSet
 import edu.uchsc.ccp.nlp.ei.mutation.MutationFinder
+import hexnlp.Util._
+import hexnlp.Implicits._
 
 trait Annotation {
   var doc:Document = _
@@ -110,7 +112,9 @@ class DummyDiseaseAnnotator extends Component {
 class MutationAnnotator extends Component {
   var extractor:MutationFinder  = _
   override def initialize() {
-    extractor = new MutationFinder("./resources/mutationFinder/regex.txt")
+    suppressConsoleOutput {
+      extractor = new MutationFinder("./resources/mutationFinder/regex.txt")
+    }
   }
 
   override def process(doc:Document) = {
@@ -130,7 +134,6 @@ class CoOccurrenceAnnotator extends Component {
 }
 
 object Prototype extends App {
-  implicit def componentToPipeline(component:Component):Pipeline = new Pipeline(component) //TODO: find a better place for this conversion
   val c1 = new DummyDiseaseAnnotator
   val c2 = new MutationAnnotator
   val doc = new Document("This disease is caused by the A54T substitution in gene XYZ.")
