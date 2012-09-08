@@ -56,18 +56,15 @@ class Document(val text: String) extends Annotation with ParentOf[Annotation] {
 //a NLP component
 abstract class Component {
   def initialize() {}
-  def process(doc: Document)
   //a concrete component needs to override this method
+  def process(doc: Document)
   def preHook() {}
   def postHook() {}
   initialize()
 }
 
 //a chain of NLP components
-class Pipeline(cs: Component*) {
-  val components = new ListBuffer[Component]
-  components.appendAll(cs)
-  //FIXME: that is silly
+class Pipeline(val components: Component*) {
   def ++(that: Pipeline) = new Pipeline((this.components ++ that.components): _*)
   //TODO: def |(that:Pipeline)
   def process(doc: Document) = {
