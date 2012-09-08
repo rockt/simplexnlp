@@ -31,7 +31,10 @@ trait Child {
 }
 
 trait Annotation extends Child {
-  def doc = parent.asInstanceOf[Document] //just an alias
+  def doc:Document = {
+    if (parent.isInstanceOf[Document]) parent.asInstanceOf[Document]
+    else parent.asInstanceOf[Annotation].doc
+  }
   //gathers all annotations recursively
   def annotations:List[Annotation] = {
     //if this is a parent, collect all children
@@ -186,6 +189,10 @@ object Prototype extends App {
   println("Text:\t\t" + doc.text)
   println("Sentences:")
   println(doc.sentences)
+  println("Sentence annotations")
+  for (sentence <- doc.sentences) {
+    println(sentence.annotations)
+  }
   println("All Annotations:")
-  println(doc.annotations) //FIXME: what goes wrong here???
+  println(doc.annotations)
 }
