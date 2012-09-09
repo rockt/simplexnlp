@@ -1,4 +1,4 @@
-package hexnlp
+package simplexnlp
 
 import java.io.{ByteArrayOutputStream, PrintStream}
 
