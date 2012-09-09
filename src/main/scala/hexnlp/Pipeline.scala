@@ -39,6 +39,7 @@ trait Child {
 }
 
 trait Annotation extends Child {
+  //the parent of an annotation is a document
   def doc: Document = {
     if (parent.isInstanceOf[Document]) parent.asInstanceOf[Document]
     else parent.asInstanceOf[Annotation].doc
@@ -46,7 +47,7 @@ trait Annotation extends Child {
 }
 
 //TODO: every document needs an ID
-//a document that store annotations
+//a document with a text an annotations
 class Document(val text: String) extends Annotation with ParentOf[Annotation] {
   override def doc = this
   def sentences = childrenFilterBy[Sentence]
@@ -118,7 +119,7 @@ abstract class Relation(entities: Entity*) extends Span {
   //TODO: a relation might have a trigger word
 }
 
-//Example NLP pipeline
+//example NLP pipeline
 case class Mutation(start: Int, end: Int) extends Entity
 case class Gene(start: Int, end: Int) extends Entity
 case class Disease(start: Int, end: Int) extends Entity
