@@ -36,8 +36,9 @@ trait Child {
   var parent: Any = _
 }
 
+//an annotation refers to a document and might be nested in another annotation
 trait Annotation extends Child {
-  //the parent of an annotation is a document
+  //get the document (root ancestor)
   def doc: Document = {
     if (parent.isInstanceOf[Document]) parent.asInstanceOf[Document]
     else parent.asInstanceOf[Annotation].doc
