@@ -1,7 +1,22 @@
-package simplexnlp
+package simplexnlp.core
 
-import collection.mutable.ListBuffer
 import simplexnlp.Util._
+import collection.mutable.ListBuffer
+
+private class Architecture //just to stop IntelliJ complaining FIXME: find a better solution
+
+//a chain of NLP components
+class Pipeline(val components: Component*) {
+  def ++(that: Pipeline) = new Pipeline((this.components ++ that.components): _*)
+  def process(doc: Document) = {
+    components.foreach((c: Component) => {
+      c.preHook()
+      c.process(doc)
+      c.postHook()
+    })
+  }
+  override def toString = components.map(getClassName(_)).mkString("*Input* => ", " -> ", " => *Output*")
+}
 
 //something that has children
 trait ParentOf[C <: Child] {
@@ -27,8 +42,8 @@ trait ParentOf[C <: Child] {
     }
     buffer.toList
   }
-  def childrenFilterBy[T](implicit mf: Manifest[T]) = filterByType[T](children)
-  def descendantsFilterBy[T](implicit mf: Manifest[T]) = filterByType[T](descendants)
+  def childrenFilteredBy[T](implicit mf: Manifest[T]) = filterByType[T](children)
+  def descendantsFilteredBy[T](implicit mf: Manifest[T]) = filterByType[T](descendants)
 }
 
 //something that has a parent
@@ -49,7 +64,7 @@ trait Annotation extends Child {
 //a document with a text an annotations
 class Document(val text: String) extends Annotation with ParentOf[Annotation] {
   override def doc = this
-  def sentences = childrenFilterBy[Sentence]
+  def sentences = childrenFilteredBy[Sentence]
 }
 
 //TODO: implement a Parameter class (Map String -> Any) for components
@@ -64,19 +79,10 @@ abstract class Component {
   initialize()
 }
 
-//a chain of NLP components
-class Pipeline(val components: Component*) {
-  def ++(that: Pipeline) = new Pipeline((this.components ++ that.components): _*)
-  //TODO: def |(that:Pipeline)
-  def process(doc: Document) = {
-    components.foreach((c: Component) => {
-      c.preHook()
-      c.process(doc)
-      c.postHook()
-    })
-  }
-  override def toString = components.map(getClassName(_)).mkString("*Input* => ", " -> ", " => *Output*")
-}
+//TODO: class Workflow
+//TODO: def |(that:Workflow)
+
+
 
 trait Span extends Annotation {
   val start: Int
@@ -99,12 +105,8 @@ trait NonOverlappingSpan extends Span with Ordered[NonOverlappingSpan] {
 }
 
 case class Sentence(start: Int, end: Int) extends NonOverlappingSpan with ParentOf[Span] {
-  def tokens = childrenFilterBy[Token]
-  def entities = childrenFilterBy[Entity]
-  //FIXME: to specific here
-  def genes = childrenFilterBy[Gene]
-  def mutations = childrenFilterBy[Mutation]
-  def diseases = childrenFilterBy[Disease]
+  def tokens = childrenFilteredBy[Token]
+  def entities = childrenFilteredBy[Entity]
 }
 
 case class Token(start: Int, end: Int) extends NonOverlappingSpan {
@@ -119,3 +121,5 @@ abstract class Relation(entities: Entity*) extends Span {
   val end = entities.head.end
   //TODO: a relation might have a trigger word
 }
+
+//TODO: implement nested relations

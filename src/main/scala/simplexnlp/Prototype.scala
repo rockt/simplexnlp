@@ -1,14 +1,11 @@
 package simplexnlp
 
+import core._
 import edu.uchsc.ccp.nlp.ei.mutation.MutationFinder
-import simplexnlp.Util._
-import simplexnlp.Implicits._
+import Util._
+import Implicits._
+import core.{Sentence => GenericSentence}
 
-/**
- * User: Tim Rocktaeschel
- * Date: 9/9/12
- * Time: 3:24 PM
- */
 
 //example NLP pipeline
 case class Mutation(start: Int, end: Int) extends Entity
@@ -26,6 +23,12 @@ case class MutationDiseaseRelation(m: Mutation, d: Disease) extends Relation(m, 
   override def toString: String = "MutationDiseaseRelation: " + m + " - " + d
 }
 
+case class Sentence(override val start: Int, override val end: Int) extends GenericSentence(start, end) {
+  def genes = childrenFilteredBy[Gene]
+  def mutations = childrenFilteredBy[Mutation]
+  def diseases = childrenFilteredBy[Disease]
+}
+
 class DummyDiseaseAnnotator extends Component {
   val DISEASE = "disease"
   override def process(doc: Document) = {
@@ -41,21 +44,27 @@ class DummySentenceAnnotator extends Component {
 }
 
 class MutationAnnotator extends Component {
-  var extractor: MutationFinder = _
+  var tagger: MutationFinder = _
   override def initialize() {
     suppressConsoleOutput {
-      extractor = new MutationFinder("./resources/mutationFinder/regex.txt")
+      tagger = new MutationFinder("./resources/mutationFinder/regex.txt")
     }
   }
   override def process(doc: Document) = {
     import scala.collection.JavaConversions._
     for (sentence <- doc.sentences) {
-      val mutations = extractor.extractMutations(sentence.text)
+      val mutations = tagger.extractMutations(sentence.text)
       for (mutation <- mutations.keySet(); tuple <- mutations.get(mutation)) {
         val span = tuple.asInstanceOf[Array[Int]]
         sentence + Mutation(span(0), span(1))
       }
     }
+  }
+}
+
+class BANNERAnnotator extends Component {
+  override def process(doc: Document) = {
+    //TODO
   }
 }
 
