@@ -1,6 +1,6 @@
 package simplexnlp.core
 
-import simplexnlp.Util._
+import simplexnlp.core.Util._
 import collection.mutable.ListBuffer
 
 private class Architecture //just to stop IntelliJ complaining FIXME: find a better solution
