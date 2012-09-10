@@ -68,7 +68,6 @@ trait Annotation extends Child {
   }
 }
 
-//TODO: every document needs an ID
 //a document with a text an annotations
 class Document(id: String, val text: String) extends Annotation with ParentOf[Annotation] {
   override def doc = this

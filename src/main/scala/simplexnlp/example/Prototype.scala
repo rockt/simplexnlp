@@ -8,7 +8,6 @@ import simplexnlp.core.{Sentence => GenericSentence}
 import opennlp.tools.sentdetect.{SentenceModel, SentenceDetectorME}
 import java.io.FileInputStream
 
-
 //example NLP pipeline
 case class Mutation(start: Int, end: Int) extends Entity
 case class Gene(start: Int, end: Int) extends Entity
@@ -33,6 +32,7 @@ case class Sentence(override val start: Int, override val end: Int) extends Gene
 
 class FineTokenizer extends Component {
   override def process(doc: Document) = {
+    //TODO: think of a more functional implementation
     for (sentence <- doc.sentences) {
       val chars = doc.text.toCharArray
       var start = 0
@@ -90,7 +90,7 @@ class SentenceAnnotator extends Component with Parameters {
 
 class GeneAnnotator extends Component {
   override def process(doc: Document) = {
-
+    //TODO
   }
 }
 
@@ -115,7 +115,7 @@ object Prototype extends App {
   println("Sentences:")
   println(doc.sentences)
   println("Sentence descendants")
-  implicit def genSenToSen(genSen: GenericSentence):Sentence = genSen.asInstanceOf[Sentence]
+  implicit def genSenToSen(genSen: GenericSentence):Sentence = genSen.asInstanceOf[Sentence] //TODO: find a better place for implicits (preferrably within the class)
   for (sentence <- doc.sentences) {
     println(sentence.mutations)
   }
