@@ -8,6 +8,7 @@ import simplexnlp.core.{Sentence => GenericSentence}
 import opennlp.tools.sentdetect.{SentenceModel, SentenceDetectorME}
 import java.io.FileInputStream
 
+
 //example NLP pipeline
 case class Mutation(start: Int, end: Int) extends Entity
 case class Gene(start: Int, end: Int) extends Entity
@@ -30,55 +31,66 @@ case class Sentence(override val start: Int, override val end: Int) extends Gene
   def diseases = childrenFilteredBy[Disease]
 }
 
-class DummyDiseaseAnnotator extends Component {
-  val DISEASE = "disease"
+class FineTokenizer extends Component {
   override def process(doc: Document) = {
-    val result = doc.text.indexOf(DISEASE)
-    if (result >= 0) doc + Disease(result, result + DISEASE.length)
-  }
-}
-
-class DummySentenceAnnotator extends Component {
-  override def process(doc: Document) = {
-    doc + Sentence(0, doc.text.length)
-  }
-}
-
-class MutationAnnotator extends Component {
-  var tagger: MutationFinder = _
-  override def initialize {
-    suppressConsoleOutput {
-      tagger = new MutationFinder("./resources/mutationFinder/regex.txt")
-    }
-  }
-  override def process(doc: Document) = {
-    import scala.collection.JavaConversions._
     for (sentence <- doc.sentences) {
-      val mutations = tagger.extractMutations(sentence.text)
-      for (mutation <- mutations.keySet(); tuple <- mutations.get(mutation)) {
-        val span = tuple.asInstanceOf[Array[Int]]
-        sentence + Mutation(span(0), span(1))
+      val chars = doc.text.toCharArray
+      var start = 0
+      for (i <- 0 until chars.length) {
+        val ch = chars(i)
+        var nch:Char = ' '
+        if (i < chars.length - 1) nch = chars(i + 1)
+        if (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r') {
+          start = start + 1
+        } else {
+          if (Character.isDigit(ch) && !Character.isDigit(nch)) {
+            sentence + Token(start, i)
+            start = i + 1
+          } else if (Character.isLetter(ch) && !Character.isLetter(nch)) {
+            sentence + Token(start, i)
+            start = i + 1
+          } else if (!(Character.isDigit(ch) || Character.isLetter(ch))) {
+            sentence + Token(start, i)
+            start = i + 1
+          }
+        }
       }
     }
   }
 }
 
-class SentenceDetector extends Component {
-  var tagger: SentenceDetectorME = _
+class MutationAnnotator extends Component with Parameters {
+  var tagger: MutationFinder = _
   override def initialize {
-    tagger = new SentenceDetectorME(new SentenceModel(new FileInputStream("./resources/OpenNLP/SentDetectGenia.bin.gz")))
+    suppressConsoleOutput {
+      tagger = new MutationFinder(parameters("pathToRegEx").asInstanceOf[String])
+    }
   }
-  override def process(doc: Document) {
-    val spans = tagger.sentPosDetect(doc.text)
-    for (span:opennlp.tools.util.Span <- spans) {
-      doc + Sentence(span.getStart, span.getEnd)
+  override def process(doc: Document) = {
+    import scala.collection.JavaConversions._
+    for (sentence <- doc.sentences; mutations = tagger.extractMutations(sentence.text); mutation <- mutations.keySet(); tuple <- mutations.get(mutation)) {
+      val span = tuple.asInstanceOf[Array[Int]]
+      sentence + Mutation(span(0), span(1)-1)
     }
   }
 }
 
-class BANNERAnnotator extends Component {
+class SentenceAnnotator extends Component with Parameters {
+  var tagger:SentenceDetectorME = _
+  override def initialize {
+    tagger = new SentenceDetectorME(new SentenceModel(new FileInputStream(parameters("pathToModelFile").asInstanceOf[String])))
+  }
+  override def process(doc: Document) {
+    val spans = tagger.sentPosDetect(doc.text)
+    for (span: opennlp.tools.util.Span <- spans) {
+      doc + Sentence(span.getStart, span.getEnd-1)
+    }
+  }
+}
+
+class GeneAnnotator extends Component {
   override def process(doc: Document) = {
-    //TODO
+
   }
 }
 
@@ -89,19 +101,23 @@ class CoOccurrenceAnnotator extends Component {
 }
 
 object Prototype extends App {
-  val s = new SentenceDetector
-  val d = new DummyDiseaseAnnotator
+  val s = new SentenceAnnotator
+  s.parameters("pathToModelFile" -> "./resources/OpenNLP/en-sent.bin")
+  val t = new FineTokenizer
   val m = new MutationAnnotator
-  val doc = new Document("This disease is caused by the A54T substitution in gene XYZ. This is another sentence.")
-  val pipeline = s -> d -> m -> d
+  m.parameters("pathToRegEx" -> "./resources/mutationFinder/regex.txt")
+  val doc = new Document(0, "This disease is caused by the A54T substitution in gene XYZ. This is another sentence.")
+  val pipeline = s -> t -> m
+  pipeline.initialize()
   pipeline.process(doc)
   println("Pipeline:\t" + pipeline)
   println("Text:\t\t" + doc.text)
   println("Sentences:")
   println(doc.sentences)
   println("Sentence descendants")
+  implicit def genSenToSen(genSen: GenericSentence):Sentence = genSen.asInstanceOf[Sentence]
   for (sentence <- doc.sentences) {
-    println(sentence.descendants)
+    println(sentence.mutations)
   }
   println("All Annotations:")
   println(doc.descendants)

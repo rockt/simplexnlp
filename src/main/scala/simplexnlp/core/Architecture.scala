@@ -20,6 +20,9 @@ class Pipeline(val components: Component*) {
     })
   }
   override def toString = components.map(getClassName(_)).mkString("*Input* => ", " -> ", " => *Output*")
+  def initialize() {
+    components.foreach(_.initialize)
+  }
 }
 
 //something that has children
@@ -67,21 +70,34 @@ trait Annotation extends Child {
 
 //TODO: every document needs an ID
 //a document with a text an annotations
-class Document(val text: String) extends Annotation with ParentOf[Annotation] {
+class Document(id: String, val text: String) extends Annotation with ParentOf[Annotation] {
   override def doc = this
   def sentences = childrenFilteredBy[Sentence]
 }
 
-//TODO: implement a Parameter class (Map String -> Any) for components
+trait Parameters {
+  import scala.collection.mutable.HashMap
+  private val params = new HashMap[String, AnyVal]
+  def parameters(tuple: Tuple2[String, _]*): Unit = {
+    tuple.foreach((t: Tuple2[String, _]) => params.put(t._1, t._2.asInstanceOf[AnyVal]))
+  }
+  def parameters(key:String) = params(key)
+}
+
 //TODO: implement Input und Output type specification
 //a NLP component
 abstract class Component {
-  def initialize() {}
   //a concrete component needs to override this method
   def process(doc: Document)
-  def preHook() {}
-  def postHook() {}
-  initialize()
+  def initialize() {
+    //something to do before start processing (e.g. loading parameters)
+  }
+  def preHook() {
+    //something to do before each call of process
+  }
+  def postHook() {
+    //something to do after each call of process
+  }
 }
 
 trait Span extends Annotation {
@@ -92,7 +108,7 @@ trait Span extends Annotation {
   //TODO: def prepend
   //TODO: def trimStart
   //TODO: def trimEnd
-  def text = doc.text.substring(start, end)
+  def text = doc.text.substring(start, end+1)
   def length = text.length
   override def toString = getClassName(this) + "[" + start + "-" + end + "]: " + text
 }
