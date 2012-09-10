@@ -5,9 +5,13 @@ import collection.mutable.ListBuffer
 
 private class Architecture //just to stop IntelliJ complaining FIXME: find a better solution
 
+
+//TODO: class Workflow
+//TODO: def |(that:Workflow)
+
 //a chain of NLP components
 class Pipeline(val components: Component*) {
-  def ++(that: Pipeline) = new Pipeline((this.components ++ that.components): _*)
+  def ->(that: Pipeline) = new Pipeline((this.components ++ that.components): _*)
   def process(doc: Document) = {
     components.foreach((c: Component) => {
       c.preHook()
@@ -53,6 +57,7 @@ trait Child {
 
 //an annotation refers to a document and might be nested in another annotation
 trait Annotation extends Child {
+  //TODO: we need a flag that distinguishes between predictions and goldstandard
   //get the document (root ancestor)
   def doc: Document = {
     if (parent.isInstanceOf[Document]) parent.asInstanceOf[Document]
@@ -78,11 +83,6 @@ abstract class Component {
   def postHook() {}
   initialize()
 }
-
-//TODO: class Workflow
-//TODO: def |(that:Workflow)
-
-
 
 trait Span extends Annotation {
   val start: Int
