@@ -3,8 +3,7 @@ package simplexnlp.core
 import simplexnlp.core.Util._
 import collection.mutable.ListBuffer
 
-private class Architecture //just to stop IntelliJ complaining FIXME: find a better solution
-
+private class Architecture //just to stop IntelliJ from complaining FIXME: find a better solution
 
 //TODO: class Workflow
 //TODO: def |(that:Workflow)
@@ -64,11 +63,12 @@ trait Annotation extends Child {
   //get the document (root ancestor)
   def doc: Document = {
     if (parent.isInstanceOf[Document]) parent.asInstanceOf[Document]
+    //recursion
     else parent.asInstanceOf[Annotation].doc
   }
 }
 
-//a document with a text an annotations
+//a document with a text and annotations
 class Document(id: String, val text: String) extends Annotation with ParentOf[Annotation] {
   override def doc = this
   def sentences = childrenFilteredBy[Sentence]
@@ -107,7 +107,25 @@ trait Span extends Annotation {
   //TODO: def prepend
   //TODO: def trimStart
   //TODO: def trimEnd
-  def text = doc.text.substring(start, end+1)
+  def enclosingText:String = {
+    parent match {
+      case span:Span => span.text
+      case doc:Document => doc.text
+    }
+  }
+  def startInDoc = {
+    parent match {
+      case span:Span => span.start + start
+      case doc:Document => start
+    }
+  }
+  def endInDoc = {
+    parent match {
+      case span:Span => span.start + end
+      case doc:Document => end
+    }
+  }
+  def text = doc.text.substring(startInDoc, endInDoc+1)
   def length = text.length
   override def toString = getClassName(this) + "[" + start + "-" + end + "]: " + text
 }
@@ -122,6 +140,7 @@ trait NonOverlappingSpan extends Span with Ordered[NonOverlappingSpan] {
 case class Sentence(start: Int, end: Int) extends NonOverlappingSpan with ParentOf[Span] {
   def tokens = childrenFilteredBy[Token]
   def entities = childrenFilteredBy[Entity]
+  def relations = childrenFilteredBy[Relation]
 }
 
 case class Token(start: Int, end: Int) extends NonOverlappingSpan {

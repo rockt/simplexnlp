@@ -7,6 +7,7 @@ import simplexnlp.core.Implicits._
 import simplexnlp.core.{Sentence => GenericSentence}
 import opennlp.tools.sentdetect.{SentenceModel, SentenceDetectorME}
 import java.io.FileInputStream
+import simplexnlp.example.Implicits._
 
 //example NLP pipeline
 case class Mutation(start: Int, end: Int) extends Entity
@@ -30,9 +31,23 @@ case class Sentence(override val start: Int, override val end: Int) extends Gene
   def diseases = childrenFilteredBy[Disease]
 }
 
+class SentenceAnnotator extends Component with Parameters {
+  var tagger:SentenceDetectorME = _
+  override def initialize {
+    tagger = new SentenceDetectorME(new SentenceModel(new FileInputStream(parameters("pathToModelFile").asInstanceOf[String])))
+  }
+  override def process(doc: Document) {
+    val spans = tagger.sentPosDetect(doc.text)
+    for (span: opennlp.tools.util.Span <- spans) {
+      doc + Sentence(span.getStart, span.getEnd-1)
+    }
+  }
+}
+
 class FineTokenizer extends Component {
   override def process(doc: Document) = {
     //TODO: think of a more functional implementation
+    //TODO: maybe a more coarse-grained tokenization is more suitable for disease NER
     for (sentence <- doc.sentences) {
       val chars = doc.text.toCharArray
       var start = 0
@@ -75,28 +90,27 @@ class MutationAnnotator extends Component with Parameters {
   }
 }
 
-class SentenceAnnotator extends Component with Parameters {
-  var tagger:SentenceDetectorME = _
-  override def initialize {
-    tagger = new SentenceDetectorME(new SentenceModel(new FileInputStream(parameters("pathToModelFile").asInstanceOf[String])))
-  }
-  override def process(doc: Document) {
-    val spans = tagger.sentPosDetect(doc.text)
-    for (span: opennlp.tools.util.Span <- spans) {
-      doc + Sentence(span.getStart, span.getEnd-1)
+class DummyDiseaseAnnotator extends Component {
+  val DISEASE = "disease"
+  override def process(doc: Document) = {
+    for (sentence <- doc.sentences) {
+      val position = sentence.text.indexOf(DISEASE)
+      if (position >= 0) sentence + Disease(position, position + DISEASE.length - 1)
     }
   }
 }
 
 class GeneAnnotator extends Component {
   override def process(doc: Document) = {
-    //TODO
+    //TODO: use GeneTUKit here
   }
 }
 
 class CoOccurrenceAnnotator extends Component {
   override def process(doc: Document) = {
-    //TODO
+    for (sentence <- doc.sentences; mutation <- sentence.mutations; disease <- sentence.diseases) {
+      sentence + MutationDiseaseRelation(mutation, disease)
+    }
   }
 }
 
@@ -105,20 +119,24 @@ object Prototype extends App {
   s.parameters("pathToModelFile" -> "./resources/OpenNLP/en-sent.bin")
   val t = new FineTokenizer
   val m = new MutationAnnotator
+  val d = new DummyDiseaseAnnotator
+  val c = new CoOccurrenceAnnotator
   m.parameters("pathToRegEx" -> "./resources/mutationFinder/regex.txt")
-  val doc = new Document(0, "This disease is caused by the A54T substitution in gene XYZ. This is another sentence.")
-  val pipeline = s -> t -> m
+  val doc = new Document(0, "This disease is caused by the A54T substitution in gene XYZ. This is another sentence mentioning a disease and A54T.")
+  val pipeline = s -> t -> m -> d -> c
   pipeline.initialize()
   pipeline.process(doc)
   println("Pipeline:\t" + pipeline)
   println("Text:\t\t" + doc.text)
   println("Sentences:")
   println(doc.sentences)
-  println("Sentence descendants")
-  implicit def genSenToSen(genSen: GenericSentence):Sentence = genSen.asInstanceOf[Sentence] //TODO: find a better place for implicits (preferrably within the class)
   for (sentence <- doc.sentences) {
-    println(sentence.mutations)
+    println("\tEntities:")
+    println(sentence.entities)
+    println("\tRelations:")
+    println(sentence.relations)
   }
-  println("All Annotations:")
-  println(doc.descendants)
+  for (annotation <- doc.descendants; if (annotation.isInstanceOf[Disease]); disease = annotation.asInstanceOf[Disease]) {
+    println(disease + " " + disease.startInDoc + " " + disease.endInDoc)
+  }
 }

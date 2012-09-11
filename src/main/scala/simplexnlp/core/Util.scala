@@ -18,6 +18,8 @@ object Util {
     }).asInstanceOf[List[T]]
   }
 
+  def convert[To](from: Any): Option[To] = if (from.isInstanceOf[To]) Some(from.asInstanceOf[To]) else None
+
   //TODO: use currying if applicable
   //TODO: getAnnotationsWithin(start: Int, end: Int)(descendants:Iterable[Span])
   //TODO: getAnnotationsStartingAt(start: Int)
