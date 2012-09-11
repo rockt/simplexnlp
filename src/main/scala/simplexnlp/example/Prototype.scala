@@ -3,7 +3,6 @@ package simplexnlp.example
 import simplexnlp.core._
 import edu.uchsc.ccp.nlp.ei.mutation.MutationFinder
 import simplexnlp.core.Util._
-import simplexnlp.core.Implicits._
 import simplexnlp.core.{Sentence => GenericSentence}
 import opennlp.tools.sentdetect.{SentenceModel, SentenceDetectorME}
 import java.io.FileInputStream
@@ -22,7 +21,7 @@ case class DDI(a: Drug, b: Drug) extends Relation(a, b) {
   override def toString: String = "DDI: " + a + " - " + b
 }
 case class MutationDiseaseRelation(m: Mutation, d: Disease) extends Relation(m, d) {
-  override def toString: String = "MutationDiseaseRelation: " + m + " - " + d
+  //override def toString: String = "MutationDiseaseRelation: " + m + " - " + d
 }
 
 case class Sentence(override val start: Int, override val end: Int) extends GenericSentence(start, end) {
@@ -111,32 +110,5 @@ class CoOccurrenceAnnotator extends Component {
     for (sentence <- doc.sentences; mutation <- sentence.mutations; disease <- sentence.diseases) {
       sentence + MutationDiseaseRelation(mutation, disease)
     }
-  }
-}
-
-object Prototype extends App {
-  val s = new SentenceAnnotator
-  s.parameters("pathToModelFile" -> "./resources/OpenNLP/en-sent.bin")
-  val t = new FineTokenizer
-  val m = new MutationAnnotator
-  val d = new DummyDiseaseAnnotator
-  val c = new CoOccurrenceAnnotator
-  m.parameters("pathToRegEx" -> "./resources/mutationFinder/regex.txt")
-  val doc = new Document(0, "This disease is caused by the A54T substitution in gene XYZ. This is another sentence mentioning a disease and A54T.")
-  val pipeline = s -> t -> m -> d -> c
-  pipeline.initialize()
-  pipeline.process(doc)
-  println("Pipeline:\t" + pipeline)
-  println("Text:\t\t" + doc.text)
-  println("Sentences:")
-  println(doc.sentences)
-  for (sentence <- doc.sentences) {
-    println("\tEntities:")
-    println(sentence.entities)
-    println("\tRelations:")
-    println(sentence.relations)
-  }
-  for (annotation <- doc.descendants; if (annotation.isInstanceOf[Disease]); disease = annotation.asInstanceOf[Disease]) {
-    println(disease + " " + disease.startInDoc + " " + disease.endInDoc)
   }
 }

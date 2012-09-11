@@ -69,7 +69,7 @@ trait Annotation extends Child {
 }
 
 //a document with a text and annotations
-class Document(id: String, val text: String) extends Annotation with ParentOf[Annotation] {
+class Document(val id: String, val text: String) extends Annotation with ParentOf[Annotation] {
   override def doc = this
   def sentences = childrenFilteredBy[Sentence]
 }
@@ -153,7 +153,6 @@ abstract class Relation(entities: Entity*) extends Span {
   //TODO: a relation might have a trigger word
   val start = entities.sortBy(_.startInDoc).head.start
   val end = entities.sortBy(_.endInDoc).last.end
-  //TODO: proper toString method
 }
 
 //TODO: implement nested relations
