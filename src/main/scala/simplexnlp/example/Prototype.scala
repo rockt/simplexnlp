@@ -33,7 +33,7 @@ case class Sentence(override val start: Int, override val end: Int) extends Gene
 class SentenceAnnotator extends Component with Parameters {
   var tagger:SentenceDetectorME = _
   override def initialize {
-    tagger = new SentenceDetectorME(new SentenceModel(new FileInputStream(parameters("pathToModelFile").asInstanceOf[String])))
+    tagger = new SentenceDetectorME(new SentenceModel(new FileInputStream(parameters[String]("pathToModelFile"))))
   }
   override def process(doc: Document) {
     val spans = tagger.sentPosDetect(doc.text)
@@ -77,7 +77,7 @@ class MutationAnnotator extends Component with Parameters {
   var tagger: MutationFinder = _
   override def initialize {
     suppressConsoleOutput {
-      tagger = new MutationFinder(parameters("pathToRegEx").asInstanceOf[String])
+      tagger = new MutationFinder(parameters[String]("pathToRegEx"))
     }
   }
   override def process(doc: Document) = {

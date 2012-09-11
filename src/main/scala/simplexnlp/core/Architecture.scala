@@ -8,9 +8,10 @@ import collection.mutable.ListBuffer
 
 abstract class Reader extends Pipeline with Parameters {
   var pipeline:Pipeline = _
-  def read:Array[Document] = read(parameters("path").asInstanceOf[String])
+  def read:Array[Document] = read(parameters[String]("path"))
   def read(path:String):Array[Document]
-  def process() = for (doc <- read) pipeline.process(doc)
+  def documents = read
+  def process() = for (doc <- documents) pipeline.process(doc)
   override def ->(that: Pipeline) = {
     pipeline.components ++ that.components
     this
@@ -89,7 +90,7 @@ trait Parameters {
   def parameters(tuple: Tuple2[String, _]*): Unit = {
     tuple.foreach((t: Tuple2[String, _]) => params.put(t._1, t._2.asInstanceOf[AnyVal]))
   }
-  def parameters(key:String) = params(key)
+  def parameters[T](key:String):T = params(key).asInstanceOf[T]
 }
 
 //TODO: implement Input und Output type specification
@@ -146,7 +147,7 @@ trait NonOverlappingSpan extends Span with Ordered[NonOverlappingSpan] {
   }
 }
 
-case class Sentence(start: Int, end: Int) extends NonOverlappingSpan with ParentOf[Span] {
+case class Sentence(start: Int, end: Int) extends NonOverlappingSpan with ParentOf[Annotation] {
   def tokens = childrenFilteredBy[Token]
   def entities = childrenFilteredBy[Entity]
   def relations = childrenFilteredBy[Relation]

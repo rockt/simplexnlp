@@ -13,12 +13,12 @@ class Specs extends FunSpec with ShouldMatchers with  GivenWhenThen {
   val text = "This disease is caused by the A54T substitution in gene XYZ. This is another sentence mentioning a disease and A54T."
   //initialize pipeline
   val s = new SentenceAnnotator
-  s.parameters("pathToModelFile" -> "./resources/OpenNLP/en-sent.bin")
+  s.parameters("pathToModelFile" -> "./ressources/OpenNLP/en-sent.bin")
   val t = new FineTokenizer
   val m = new MutationAnnotator
   val d = new DummyDiseaseAnnotator
   val c = new CoOccurrenceAnnotator
-  m.parameters("pathToRegEx" -> "./resources/mutationFinder/regex.txt")
+  m.parameters("pathToRegEx" -> "./ressources/mutationFinder/regex.txt")
   doc = new Document(ID, text)
   val pipeline = s -> t -> m -> d -> c
   pipeline.initialize()
@@ -34,6 +34,12 @@ class Specs extends FunSpec with ShouldMatchers with  GivenWhenThen {
         sentence.mutations.size should equal (1)
         sentence.relations.size should equal (1)
       }
+    }
+  }
+
+  describe("An annotation") {
+    it ("can have nested annotations") {
+      pending
     }
   }
 }
