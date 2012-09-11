@@ -3,15 +3,24 @@ package simplexnlp.core
 import simplexnlp.core.Util._
 import collection.mutable.ListBuffer
 
-private class Architecture //just to stop IntelliJ from complaining FIXME: find a better solution
-
 //TODO: class Workflow
 //TODO: def |(that:Workflow)
+
+abstract class Reader extends Pipeline with Parameters {
+  var pipeline:Pipeline = _
+  def read:Array[Document] = read(parameters("path").asInstanceOf[String])
+  def read(path:String):Array[Document]
+  def process() = for (doc <- read) pipeline.process(doc)
+  override def ->(that: Pipeline) = {
+    pipeline.components ++ that.components
+    this
+  }
+}
 
 //a chain of NLP components
 class Pipeline(val components: Component*) {
   def ->(that: Pipeline) = new Pipeline((this.components ++ that.components): _*)
-  def process(doc: Document) = {
+  def process(doc: Document):Unit = {
     components.foreach((c: Component) => {
       c.preHook()
       c.process(doc)
@@ -20,7 +29,7 @@ class Pipeline(val components: Component*) {
   }
   override def toString = components.map(getClassName(_)).mkString("*Input* => ", " -> ", " => *Output*")
   def initialize() {
-    components.foreach(_.initialize)
+    components.foreach(_.initialize())
   }
 }
 
