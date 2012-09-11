@@ -150,10 +150,10 @@ case class Token(start: Int, end: Int) extends NonOverlappingSpan {
 trait Entity extends Span
 
 abstract class Relation(entities: Entity*) extends Span {
-  //TODO: find start of first and end of last entity instead
-  val start = entities.head.start
-  val end = entities.head.end
   //TODO: a relation might have a trigger word
+  val start = entities.sortBy(_.startInDoc).head.start
+  val end = entities.sortBy(_.endInDoc).last.end
+  //TODO: proper toString method
 }
 
 //TODO: implement nested relations
