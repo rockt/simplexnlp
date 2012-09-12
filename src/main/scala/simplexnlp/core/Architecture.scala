@@ -121,15 +121,15 @@ trait Span extends Annotation {
       case doc:Document => doc.text
     }
   }
-  def startInDoc = {
+  def startInDoc:Int = {
     parent match {
-      case span:Span => span.start + start
+      case span:Span => span.startInDoc + start
       case doc:Document => start
     }
   }
-  def endInDoc = {
+  def endInDoc:Int = {
     parent match {
-      case span:Span => span.start + end
+      case span:Span => span.startInDoc + end
       case doc:Document => end
     }
   }
