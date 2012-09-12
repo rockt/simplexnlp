@@ -1,38 +1,10 @@
 package simplexnlp.core
 
 import simplexnlp.core.Util._
-import collection.mutable.ListBuffer
+import collection.mutable.{ArrayBuffer, ListBuffer}
 
 //TODO: class Workflow
 //TODO: def |(that:Workflow)
-
-abstract class Reader extends Pipeline with Parameters {
-  var pipeline:Pipeline = _
-  def read:Array[Document] = read(parameters[String]("path"))
-  def read(path:String):Array[Document]
-  def documents = read
-  def process() = for (doc <- documents) pipeline.process(doc)
-  override def ->(that: Pipeline) = {
-    pipeline.components ++ that.components
-    this
-  }
-}
-
-//a chain of NLP components
-class Pipeline(val components: Component*) {
-  def ->(that: Pipeline) = new Pipeline((this.components ++ that.components): _*)
-  def process(doc: Document):Unit = {
-    components.foreach((c: Component) => {
-      c.preHook()
-      c.process(doc)
-      c.postHook()
-    })
-  }
-  override def toString = components.map(getClassName(_)).mkString("*Input* => ", " -> ", " => *Output*")
-  def initialize() {
-    components.foreach(_.initialize())
-  }
-}
 
 //something that has children
 trait ParentOf[C <: Child] {
@@ -82,13 +54,8 @@ class Document(val id: String, val text: String) extends Annotation with ParentO
   def sentences = children[Sentence]
 }
 
-trait Parameters {
-  import scala.collection.mutable.HashMap
-  private val params = new HashMap[String, AnyVal]
-  def parameters(tuple: Tuple2[String, _]*): Unit = {
-    tuple.foreach((t: Tuple2[String, _]) => params.put(t._1, t._2.asInstanceOf[AnyVal]))
-  }
-  def parameters[T](key:String):T = params(key).asInstanceOf[T]
+class Corpus extends ArrayBuffer[Document] {
+  //TODO: def splitIntoFolds(number: Int)
 }
 
 //TODO: implement Input und Output type specification
@@ -104,6 +71,45 @@ abstract class Component {
   }
   def postHook() {
     //something to do after each call of process
+  }
+}
+
+//a chain of NLP components
+class Pipeline(val components: Component*) {
+  def ->(that: Pipeline) = new Pipeline((this.components ++ that.components): _*)
+  def process(doc: Document):Unit = {
+    components.foreach((c: Component) => {
+      c.preHook()
+      c.process(doc)
+      c.postHook()
+    })
+  }
+  override def toString = components.map(getClassName(_)).mkString("*Input* => ", " -> ", " => *Output*")
+  def initialize() {
+    components.foreach(_.initialize())
+  }
+}
+
+//TODO: there has to be a more elegant way
+trait Parameters {
+  import scala.collection.mutable.HashMap
+  private val params = new HashMap[String, AnyVal]
+  def parameters(tuple: Tuple2[String, _]*): Unit = {
+    tuple.foreach((t: Tuple2[String, _]) => params.put(t._1, t._2.asInstanceOf[AnyVal]))
+  }
+  def parameters[T](key:String):T = params(key).asInstanceOf[T]
+}
+
+abstract class Reader extends Pipeline with Parameters {
+  var pipeline:Pipeline = _
+  def read:Corpus = read(parameters[String]("path"))
+  //TODO: would be nicer to have an Iterator here!
+  def read(path:String):Corpus
+  def documents = read
+  def process() = for (doc <- documents) pipeline.process(doc)
+  override def ->(that: Pipeline) = {
+    pipeline.components ++ that.components
+    this
   }
 }
 

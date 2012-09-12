@@ -7,7 +7,7 @@ import simplexnlp.core.Implicits._
 import simplexnlp.example.Implicits._
 import simplexnlp.example._
 
-class Specs extends FunSpec with ShouldMatchers with  GivenWhenThen {
+class Specs extends FunSpec with ShouldMatchers with GivenWhenThen {
   var doc:Document = _
   val ID = "doc423"
   val text = "This disease is caused by the A54T substitution in gene XYZ. This is another sentence mentioning a disease and A54T."
