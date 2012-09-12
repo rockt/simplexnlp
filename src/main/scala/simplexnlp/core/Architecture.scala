@@ -52,6 +52,8 @@ trait Annotation extends Child {
 class Document(val id: String, val text: String) extends Annotation with ParentOf[Annotation] {
   override def doc = this
   def sentences = children[Sentence]
+  //FIXME: should be generic
+  def coveredSpans(start:Int, end:Int):List[Span] = descendants[Span].filter((s:Span) => (s.start >= start && s.end <= end))
 }
 
 class Corpus extends ArrayBuffer[Document] {
@@ -159,6 +161,8 @@ trait Span extends Annotation {
       case doc:Document => end
     }
   }
+  //FIXME: should be generic
+  def covered = doc.coveredSpans(start, end)
   def text = doc.text.substring(startInDoc, endInDoc+1)
   def length = text.length
   override def toString = getClassName(this) + "[" + start + "-" + end + "]: " + text
@@ -175,10 +179,19 @@ case class Sentence(start: Int, end: Int) extends NonOverlappingSpan with Parent
   def tokens = children[Token]
   def entities = children[Entity]
   def relations = children[Relation]
+  private var numberOfTokens = 0
+  override def add(child: Annotation) = {
+    if (child.isInstanceOf[Token]) {
+      child.asInstanceOf[Token].index = numberOfTokens
+      numberOfTokens += 1
+    }
+    super.add(child)
+  }
 }
 
 case class Token(start: Int, end: Int) extends NonOverlappingSpan {
   var pos: String = _
+  var index: Int = _
 }
 
 trait Entity extends Span
