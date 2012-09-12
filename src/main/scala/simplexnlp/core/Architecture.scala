@@ -37,7 +37,6 @@ class Pipeline(val components: Component*) {
 //something that has children
 trait ParentOf[C <: Child] {
   private val childrenBuffer = new ListBuffer[C]
-  def children = childrenBuffer.toList
   def add(child: C) = {
     childrenBuffer += child
     child.parent = this
@@ -48,18 +47,17 @@ trait ParentOf[C <: Child] {
   }
   def +(child: C) = add(child)
   def -(child: C) = remove(child)
-  //gathers all descendants recursively
-  def descendants: List[C] = {
+  private def gatherDescendants: List[C] = {
     val buffer = new ListBuffer[C]
     for (child <- this.asInstanceOf[ParentOf[C]].childrenBuffer) {
       buffer.append(child)
       //recursion
-      if (child.isInstanceOf[ParentOf[C]]) buffer.appendAll(child.asInstanceOf[ParentOf[C]].descendants)
+      if (child.isInstanceOf[ParentOf[C]]) buffer.appendAll(child.asInstanceOf[ParentOf[C]].gatherDescendants)
     }
     buffer.toList
   }
-  def childrenFilteredBy[T](implicit mf: Manifest[T]) = filterByType[T](children)
-  def descendantsFilteredBy[T](implicit mf: Manifest[T]) = filterByType[T](descendants)
+  def children[T](implicit mf: Manifest[T]) = filterByType[T](childrenBuffer.toList)
+  def descendants[T](implicit mf: Manifest[T]) = filterByType[T](gatherDescendants)
 }
 
 //something that has a parent
@@ -81,7 +79,7 @@ trait Annotation extends Child {
 //a document with a text and annotations
 class Document(val id: String, val text: String) extends Annotation with ParentOf[Annotation] {
   override def doc = this
-  def sentences = childrenFilteredBy[Sentence]
+  def sentences = children[Sentence]
 }
 
 trait Parameters {
@@ -148,9 +146,9 @@ trait NonOverlappingSpan extends Span with Ordered[NonOverlappingSpan] {
 }
 
 case class Sentence(start: Int, end: Int) extends NonOverlappingSpan with ParentOf[Annotation] {
-  def tokens = childrenFilteredBy[Token]
-  def entities = childrenFilteredBy[Entity]
-  def relations = childrenFilteredBy[Relation]
+  def tokens = children[Token]
+  def entities = children[Entity]
+  def relations = children[Relation]
 }
 
 case class Token(start: Int, end: Int) extends NonOverlappingSpan {

@@ -25,9 +25,9 @@ case class MutationDiseaseRelation(m: Mutation, d: Disease) extends Relation(m, 
 }
 
 case class Sentence(override val start: Int, override val end: Int) extends GenericSentence(start, end) {
-  def genes = childrenFilteredBy[Gene]
-  def mutations = childrenFilteredBy[Mutation]
-  def diseases = childrenFilteredBy[Disease]
+  def genes = children[Gene]
+  def mutations = children[Mutation]
+  def diseases = children[Disease]
 }
 
 class SentenceAnnotator extends Component with Parameters {
