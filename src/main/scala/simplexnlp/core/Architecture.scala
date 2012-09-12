@@ -55,7 +55,27 @@ class Document(val id: String, val text: String) extends Annotation with ParentO
 }
 
 class Corpus extends ArrayBuffer[Document] {
-  //TODO: def splitIntoFolds(number: Int)
+  def shuffled(seed: Int):Array[Document] = {
+    val random = new scala.util.Random(seed)
+
+    //Fisher Yates Shuffle from: http://jdleesmiller.blogspot.de/2008/12/shuffles-surprises-and-scala.html
+    def fisherYatesShuffle[T](xs: Array[T]) = {
+      for (i <- xs.indices.reverse)
+        swap(xs, i, random.nextInt(i + 1))
+    }
+
+    def swap[T](xs: Array[T], i: Int, j: Int) = {
+      val t = xs(i)
+      xs(i) = xs(j)
+      xs(j) = t
+    }
+
+    val temp = this.toArray
+    fisherYatesShuffle(temp)
+    temp
+  }
+
+  //TODO: def splits(number: Int, seed:Int)
 }
 
 //TODO: implement Input und Output type specification
