@@ -48,7 +48,7 @@ class FineTokenizer extends Component {
     //TODO: think of a more functional implementation
     //TODO: maybe a more coarse-grained tokenization is more suitable for disease NER
     for (sentence <- doc.sentences) {
-      val chars = doc.text.toCharArray
+      val chars = sentence.text.toCharArray
       var start = 0
       for (i <- 0 until chars.length) {
         val ch = chars(i)

@@ -53,7 +53,8 @@ class Document(val id: String, val text: String) extends Annotation with ParentO
   override def doc = this
   def sentences = children[Sentence]
   //FIXME: should be generic
-  def coveredSpans(start:Int, end:Int):List[Span] = descendants[Span].filter((s:Span) => (s.start >= start && s.end <= end))
+  //FIXME: infinity loop???
+  def coveredSpans(start:Int, end:Int):List[Span] = descendants[Span].filter((s:Span) => (s.startInDoc >= start && s.endInDoc <= end))
 }
 
 class Corpus extends ArrayBuffer[Document] {
@@ -96,9 +97,11 @@ abstract class Component {
   }
 }
 
+//FIXME: uptil now we no real pipelining!
 //a chain of NLP components
-class Pipeline(val components: Component*) {
-  def ->(that: Pipeline) = new Pipeline((this.components ++ that.components): _*)
+class Pipeline(comps: Component*) {
+  var components = comps.toList
+  def ++(that: Pipeline) = new Pipeline((this.components ++ that.components): _*)
   def process(doc: Document):Unit = {
     components.foreach((c: Component) => {
       c.preHook()
@@ -106,7 +109,14 @@ class Pipeline(val components: Component*) {
       c.postHook()
     })
   }
-  override def toString = components.map(getClassName(_)).mkString("*Input* => ", " -> ", " => *Output*")
+  def process():Unit = {
+    components.head match {
+      case r:Reader => r.process()
+      case _ => throw new IllegalStateException("The first component has to be a Reader if you want to use this method!")
+    }
+  }
+  override def toString = components.map(getClassName(_)).mkString("*Input* => " +
+    (if (this.isInstanceOf[Reader]) getClassName(this) + " -> " else ""), " -> ", " => *Output*")
   def initialize() {
     components.foreach(_.initialize())
   }
@@ -122,16 +132,24 @@ trait Parameters {
   def parameters[T](key:String):T = params(key).asInstanceOf[T]
 }
 
+
+//TODO: think of a more elegant implementation!
 abstract class Reader extends Pipeline with Parameters {
-  var pipeline:Pipeline = _
   def read:Corpus = read(parameters[String]("path"))
   //TODO: would be nicer to have an Iterator here!
   def read(path:String):Corpus
-  def documents = read
-  def process() = for (doc <- documents) pipeline.process(doc)
-  override def ->(that: Pipeline) = {
-    pipeline.components ++ that.components
+  def documents:Corpus = {
+    val docs = read
+    for (doc <- docs) super.process(doc)
+    docs
+  }
+  override def process():Unit = for (doc <- read) super.process(doc)
+  override def ++(that: Pipeline):Pipeline = {
+    components = this.components ++ that.components
     this
+  }
+  override def process(doc:Document) = {
+    //do nothing
   }
 }
 
@@ -162,7 +180,7 @@ trait Span extends Annotation {
     }
   }
   //FIXME: should be generic
-  def covered = doc.coveredSpans(start, end)
+  def covered = doc.coveredSpans(startInDoc, endInDoc)
   def text = doc.text.substring(startInDoc, endInDoc+1)
   def length = text.length
   override def toString = getClassName(this) + "[" + start + "-" + end + "]: " + text
