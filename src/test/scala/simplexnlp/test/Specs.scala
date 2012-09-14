@@ -20,7 +20,7 @@ class Specs extends FunSpec with ShouldMatchers with GivenWhenThen {
   val c = new CoOccurrenceAnnotator
   m.parameters("pathToRegEx" -> "./ressources/mutationFinder/regex.txt")
   doc = new Document(ID, text)
-  val pipeline = s -> t -> m -> d -> c
+  val pipeline = s ++ t ++ m ++ d ++ c
   pipeline.initialize()
   pipeline.process(doc)
 

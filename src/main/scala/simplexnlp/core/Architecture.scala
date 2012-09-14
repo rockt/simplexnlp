@@ -2,6 +2,7 @@ package simplexnlp.core
 
 import simplexnlp.core.Util._
 import collection.mutable.{ArrayBuffer, ListBuffer}
+import simplexnlp.example.Disease
 
 //TODO: class Workflow
 //TODO: def |(that:Workflow)
@@ -14,7 +15,7 @@ trait ParentOf[C <: Child] {
     child.parent = this
   }
   def remove(child: C) = {
-    childrenBuffer - child
+    childrenBuffer -= child
     child.parent = null
   }
   def +(child: C) = add(child)
@@ -142,6 +143,7 @@ trait Parameters {
 
 //TODO: think of a more elegant implementation!
 abstract class Reader extends Pipeline with Parameters {
+  //FIXME: a reader alone should initialize itself
   def read:Corpus = read(parameters[String]("path"))
   //TODO: would be nicer to have an Iterator here!
   def read(path:String):Corpus
@@ -219,6 +221,7 @@ case class Token(start: Int, end: Int) extends NonOverlappingSpan {
   var index: Int = _
 }
 
+//trait Entity extends Span
 trait Entity extends Span
 
 abstract class Relation(entities: Entity*) extends Span {
@@ -235,20 +238,24 @@ abstract class Evaluator {
   var FP:Double = 0
   var FN:Double = 0
   def P = TP/(TP + FP)
-  def R = FN/(TP + FN)
+  def R = TP/(TP + FN)
   def F1 = (2 * P * R)/(P + R)
 
-  def evaluate(gold: Sentence, predict: Sentence)
+  def evaluate(gold: Sentence, predicted: Sentence)
 
-  def evaluate(gold:Corpus, predict:Corpus) {
-    assert(gold.size == predict.size)
+  def evaluate(gold:Corpus, predicted:Corpus) {
+    assert(gold.size == predicted.size)
     for (i <- 0 until gold.size) {
-      assert(gold(i).sentences.size == predict(i).sentences.size)
-      for (j <- 0 until gold(i).sentences.size) {
-        assert(gold(i).sentences(j).tokens.size == predict(i).sentences(j).tokens.size)
-        evaluate(gold(i).sentences(j), predict(i).sentences(j))
+      val goldDoc = gold(i)
+      val predictedDoc = predicted.find(_.id == goldDoc.id).get
+      assert(goldDoc.id == predictedDoc.id, "IDs of documents don't match: " + gold(i).id + " vs. " + predictedDoc.id)
+      assert(goldDoc.sentences.size == predictedDoc.sentences.size)
+      for (j <- 0 until goldDoc.sentences.size) {
+        assert(goldDoc.sentences(j).tokens.size == predictedDoc.sentences(j).tokens.size)
+        evaluate(goldDoc.sentences(j), predictedDoc.sentences(j))
       }
     }
+    printResults
   }
 
   def performKFoldCV(folds: Int, corpus:Corpus, pipeline:Pipeline) {
@@ -256,6 +263,31 @@ abstract class Evaluator {
   }
 
   def printResults = {
-    println("%f\t%f\t%f\t%.2f\t%.2f\t%.2f".format(TP, FP, FN, P, R, F1))
+    println("TP\tFP\tFN\tP\tR\tF1")
+    println("%d\t%d\t%d\t%.2f\t%.2f\t%.2f".format(TP.toInt, FP.toInt, FN.toInt, P, R, F1))
+  }
+}
+
+class NEREvaluator[T <: Span] extends Evaluator {
+  def evaluate(gold: Sentence, predicted: Sentence) = {
+    //FIXME: generalize this towards T
+    val goldEntities = gold.children[Disease]
+    val predictedEntities = predicted.children[Disease]
+    val currentTP = goldEntities.filter((g:Disease) => predictedEntities.exists((p:Disease) => g.start == p.start && g.end == p.end)).size
+    val currentFP = predictedEntities.filter((p:Disease) => !goldEntities.exists((g:Disease) => g.start == p.start && g.end == p.end)).size
+    val currentFN = goldEntities.filter((g:Disease) => !predictedEntities.exists((p:Disease) => g.start == p.start && g.end == p.end)).size
+    TP += currentTP
+    FP += currentFP
+    FN += currentFN
+    assert(currentTP + currentFP == predictedEntities.size, {
+      (currentTP + currentFP) + " vs. " + predictedEntities.size + "\n" +
+        "gold: " + goldEntities + "\n" +
+        "predict: " + predictedEntities + "\n"
+    })
+    assert(currentTP + currentFN == goldEntities.size, {
+      (currentTP + currentFN) + " vs. " + goldEntities.size + "\n" +
+        "gold: " + goldEntities + "\n" +
+        "predict: " + predictedEntities + "\n"
+    })
   }
 }
