@@ -37,8 +37,15 @@ trait Child {
   var parent: Any = _
 }
 
+//stores predictions by NLP components
+trait Prediction {
+  private var pred:Any = _
+  def prediction_=(p:Any) = { pred = p }
+  def prediction[T]():T = pred.asInstanceOf[T]
+}
+
 //an annotation refers to a document and might be nested in another annotation
-trait Annotation extends Child {
+trait Annotation extends Child with Prediction {
   //TODO: we need a flag that distinguishes between predictions and goldstandard
   //get the document (root ancestor)
   def doc: Document = {
@@ -47,6 +54,8 @@ trait Annotation extends Child {
     else parent.asInstanceOf[Annotation].doc
   }
 }
+
+
 
 //a document with a text and annotations
 class Document(val id: String, val text: String) extends Annotation with ParentOf[Annotation] {
@@ -117,9 +126,7 @@ class Pipeline(comps: Component*) {
   }
   override def toString = components.map(getClassName(_)).mkString("*Input* => " +
     (if (this.isInstanceOf[Reader]) getClassName(this) + " -> " else ""), " -> ", " => *Output*")
-  def initialize() {
-    components.foreach(_.initialize())
-  }
+  def initialize() = { components.foreach(_.initialize()) }
 }
 
 //TODO: there has to be a more elegant way
@@ -221,3 +228,34 @@ abstract class Relation(entities: Entity*) extends Span {
 }
 
 //TODO: implement nested relations
+
+
+abstract class Evaluator {
+  var TP:Double = 0
+  var FP:Double = 0
+  var FN:Double = 0
+  def P = TP/(TP + FP)
+  def R = FN/(TP + FN)
+  def F1 = (2 * P * R)/(P + R)
+
+  def evaluate(gold: Sentence, predict: Sentence)
+
+  def evaluate(gold:Corpus, predict:Corpus) {
+    assert(gold.size == predict.size)
+    for (i <- 0 until gold.size) {
+      assert(gold(i).sentences.size == predict(i).sentences.size)
+      for (j <- 0 until gold(i).sentences.size) {
+        assert(gold(i).sentences(j).tokens.size == predict(i).sentences(j).tokens.size)
+        evaluate(gold(i).sentences(j), predict(i).sentences(j))
+      }
+    }
+  }
+
+  def performKFoldCV(folds: Int, corpus:Corpus, pipeline:Pipeline) {
+    //TODO
+  }
+
+  def printResults = {
+    println("%f\t%f\t%f\t%.2f\t%.2f\t%.2f".format(TP, FP, FN, P, R, F1))
+  }
+}
