@@ -7,6 +7,7 @@ import simplexnlp.core.{Sentence => GenericSentence}
 import opennlp.tools.sentdetect.{SentenceModel, SentenceDetectorME}
 import java.io.FileInputStream
 import simplexnlp.example.Implicits._
+import opennlp.tools.postag.{POSModel, POSTaggerME}
 
 //example NLP pipeline
 case class Mutation(start: Int, end: Int) extends Entity
@@ -33,12 +34,26 @@ case class Sentence(override val start: Int, override val end: Int) extends Gene
 class SentenceAnnotator extends Component with Parameters {
   var tagger:SentenceDetectorME = _
   override def initialize {
-    tagger = new SentenceDetectorME(new SentenceModel(new FileInputStream(parameters[String]("pathToModelFile"))))
+    tagger = new SentenceDetectorME(new SentenceModel(new FileInputStream(parameters[String]("path"))))
   }
   override def process(doc: Document) {
     val spans = tagger.sentPosDetect(doc.text)
     for (span: opennlp.tools.util.Span <- spans) {
       doc + Sentence(span.getStart, span.getEnd-1)
+    }
+  }
+}
+
+class POSTagger extends Component with Parameters {
+  var tagger:POSTaggerME = _
+  override def initialize {
+    tagger = new POSTaggerME(new POSModel(new FileInputStream(parameters[String]("path"))))
+  }
+  override def process(doc: Document) {
+    for (sentence <- doc.sentences) {
+      val tokens = sentence.tokens
+      val tags = tagger.tag(tokens.map(_.text).toArray)
+      for (i <- 0 until tokens.size) tokens(i).pos = tags(i)
     }
   }
 }
@@ -77,7 +92,7 @@ class MutationAnnotator extends Component with Parameters {
   var tagger: MutationFinder = _
   override def initialize {
     suppressConsoleOutput {
-      tagger = new MutationFinder(parameters[String]("pathToRegEx"))
+      tagger = new MutationFinder(parameters[String]("path"))
     }
   }
   override def process(doc: Document) = {

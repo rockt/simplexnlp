@@ -70,11 +70,6 @@ class Document(val id: String, val text: String) extends Annotation with ParentO
 //      sentence - t
 //    }
 //  }
-  def reset:Document = {
-    val doc = new Document(id, text)
-    for (s <- sentences) doc + Sentence(s.start, s.end)
-    doc
-  }
 }
 
 class Corpus extends ArrayBuffer[Document] {
