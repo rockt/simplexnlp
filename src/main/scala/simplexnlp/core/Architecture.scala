@@ -65,6 +65,16 @@ class Document(val id: String, val text: String) extends Annotation with ParentO
   //FIXME: should be generic
   //FIXME: infinity loop???
   def coveredSpans(start:Int, end:Int):List[Span] = descendants[Span].filter((s:Span) => (s.startInDoc >= start && s.endInDoc <= end))
+//  def reset[T <: Annotation](implicit mf: Manifest[T]) = {
+//    for (sentence <- sentences; t <- sentence.children[T]) {
+//      sentence - t
+//    }
+//  }
+  def reset:Document = {
+    val doc = new Document(id, text)
+    for (s <- sentences) doc + Sentence(s.start, s.end)
+    doc
+  }
 }
 
 class Corpus extends ArrayBuffer[Document] {
@@ -88,7 +98,13 @@ class Corpus extends ArrayBuffer[Document] {
     temp
   }
 
-  //TODO: def splits(number: Int, seed:Int)
+  def round[T](l: List[T], n: Int) = (0 until n).map{ i => l.drop(i).sliding(1, n).flatten.toList }.toList
+
+  def split(parts: Int, seed:Int):Array[Array[Document]] = {
+    val temp = shuffled(seed)
+    val splits = round(temp.toList, parts)
+    splits.map(_.toArray).toArray
+  }
 }
 
 //TODO: implement Input und Output type specification
@@ -256,10 +272,6 @@ abstract class Evaluator {
       }
     }
     printResults
-  }
-
-  def performKFoldCV(folds: Int, corpus:Corpus, pipeline:Pipeline) {
-    //TODO
   }
 
   def printResults = {
