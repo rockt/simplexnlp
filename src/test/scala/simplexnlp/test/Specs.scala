@@ -35,9 +35,6 @@ class Specs extends FunSpec with ShouldMatchers with GivenWhenThen {
         sentence.diseases.size should equal (1)
         sentence.mutations.size should equal (1)
         sentence.relations.size should equal (1)
-        for (token <- sentence.tokens) {
-          println(token + " " + token.pos)
-        }
       }
     }
   }
