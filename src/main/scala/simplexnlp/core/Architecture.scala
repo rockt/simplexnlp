@@ -254,7 +254,9 @@ abstract class Evaluator {
 
   def evaluate(gold: Sentence, predicted: Sentence)
 
-  def evaluate(gold:Corpus, predicted:Corpus) {
+  def evaluate(goldCorpus:Corpus, predictedCorpus:Corpus) {
+    val gold = goldCorpus.sortBy(_.id)
+    val predicted = predictedCorpus.sortBy(_.id)
     assert(gold.size == predicted.size)
     for (i <- 0 until gold.size) {
       val goldDoc = gold(i)
