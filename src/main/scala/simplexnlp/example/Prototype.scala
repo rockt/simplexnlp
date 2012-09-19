@@ -61,7 +61,6 @@ class POSTagger extends Component with Parameters {
 class FineTokenizer extends Component {
   override def process(doc: Document) = {
     //TODO: think of a more functional implementation
-    //TODO: maybe a more coarse-grained tokenization is more suitable for disease NER
     for (sentence <- doc.sentences) {
       val chars = sentence.text.toCharArray
       var start = 0
@@ -82,6 +81,29 @@ class FineTokenizer extends Component {
             sentence + Token(start, i)
             start = i + 1
           }
+        }
+      }
+    }
+  }
+}
+
+class WhiteSpaceTokenizer extends Component {
+  override def process(doc: Document) = {
+    //TODO: think of a more functional implementation
+    for (sentence <- doc.sentences) {
+      val chars = sentence.text.toCharArray
+      var start = 0
+      for (i <- 0 until chars.length) {
+        val ch = chars(i)
+        var nch:Char = ' '
+        if (i < chars.length - 1) nch = chars(i + 1)
+        if (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r') {
+          start = start + 1
+        } else if (nch == ' ' || nch == '\t' || nch == '\n' || nch == '\r') {
+          sentence + Token(start, i)
+          start = i + 1
+        } else {
+          //wait for next whitespace
         }
       }
     }
