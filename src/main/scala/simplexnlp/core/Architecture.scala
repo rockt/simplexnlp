@@ -63,7 +63,6 @@ class Document(val id: String, val text: String) extends Annotation with ParentO
   override def doc = this
   def sentences = children[Sentence]
   //FIXME: should be generic
-  //FIXME: infinity loop???
   def coveredSpans(start:Int, end:Int):List[Span] = descendants[Span].filter((s:Span) => (s.startInDoc >= start && s.endInDoc <= end))
 //  def reset[T <: Annotation](implicit mf: Manifest[T]) = {
 //    for (sentence <- sentences; t <- sentence.children[T]) {
@@ -118,7 +117,7 @@ abstract class Component {
   }
 }
 
-//FIXME: uptil now we no real pipelining!
+//FIXME: uptil now theres is no real pipelining! use actors!
 //a chain of NLP components
 class Pipeline(comps: Component*) {
   var components = comps.toList
@@ -149,6 +148,9 @@ trait Parameters {
     tuple.foreach((t: Tuple2[String, _]) => params.put(t._1, t._2.asInstanceOf[AnyVal]))
   }
   def parameters[T](key:String):T = params(key).asInstanceOf[T]
+  def add(t: Tuple2[String, _]) = params.put(t._1, t._2.asInstanceOf[AnyVal])
+  def print() = for (key <- params.keySet.toList.sorted) println(key + " " + params(key))
+  def contains(key: String) = params.contains(key)
 }
 
 
@@ -268,12 +270,29 @@ abstract class Evaluator {
         evaluate(goldDoc.sentences(j), predictedDoc.sentences(j))
       }
     }
-    printResults
+    //printResults
   }
 
   def printResults = {
     println("TP\tFP\tFN\tP\tR\tF1")
     println("%d\t%d\t%d\t%.2f\t%.2f\t%.2f".format(TP.toInt, FP.toInt, FN.toInt, P, R, F1))
+  }
+}
+
+object CVEvaluator {
+  def getMetrics(TP: Double, FP: Double, FN: Double) = {
+    def P = TP/(TP + FP)
+    def R = TP/(TP + FN)
+    def F1 = if (P == 0 || R == 0) 0.0 else (2 * P * R)/(P + R)
+    (P,R,F1)
+  }
+  def printResults(results: List[Tuple3[Double, Double, Double]]) {
+    val TP = results.map(_._1).sum
+    val FP = results.map(_._2).sum
+    val FN = results.map(_._3).sum
+    val res = getMetrics(TP.toInt, FP.toInt, FN.toInt)
+    println("TP\tFP\tFN\tP\tR\tF1")
+    println("%d\t%d\t%d\t%.2f\t%.2f\t%.2f".format(TP.toInt, FP.toInt, FN.toInt, res._1, res._2, res._3))
   }
 }
 

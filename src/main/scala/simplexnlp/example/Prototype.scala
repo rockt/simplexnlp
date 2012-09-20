@@ -87,8 +87,35 @@ class FineTokenizer extends Component {
   }
 }
 
+class SimpleTokenizer extends Component {
+  def process(doc: Document) = {
+    //TODO: think of a more functional implementation
+    for (sentence <- doc.sentences) {
+      val chars = sentence.text.toCharArray
+      var start = 0
+      for (i <- 0 until chars.length) {
+        val ch = chars(i)
+        var nch:Char = ' '
+        if (i < chars.length - 1) nch = chars(i + 1)
+        if (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r') {
+          start = start + 1
+        } else if ((Character.isLetterOrDigit(ch) && !Character.isLetterOrDigit(nch)) ||
+        (!Character.isLetterOrDigit(ch) && Character.isLetterOrDigit(nch))) {
+          sentence + Token(start, i)
+          start = i + 1
+        } else if (nch == ' ' || nch == '\t' || nch == '\n' || nch == '\r') {
+          sentence + Token(start, i)
+          start = i + 1
+        } else {
+          //wait for next whitespace
+        }
+      }
+    }
+  }
+}
+
 class WhiteSpaceTokenizer extends Component {
-  override def process(doc: Document) = {
+  def process(doc: Document) {
     //TODO: think of a more functional implementation
     for (sentence <- doc.sentences) {
       val chars = sentence.text.toCharArray
@@ -117,7 +144,7 @@ class MutationAnnotator extends Component with Parameters {
       tagger = new MutationFinder(parameters[String]("path"))
     }
   }
-  override def process(doc: Document) = {
+  def process(doc: Document) = {
     import scala.collection.JavaConversions._
     for (sentence <- doc.sentences; mutations = tagger.extractMutations(sentence.text); mutation <- mutations.keySet(); tuple <- mutations.get(mutation)) {
       val span = tuple.asInstanceOf[Array[Int]]
