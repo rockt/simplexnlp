@@ -151,6 +151,7 @@ trait Parameters {
   def add(t: Tuple2[String, _]) = params.put(t._1, t._2.asInstanceOf[AnyVal])
   def print() = for (key <- params.keySet.toList.sorted) println(key + " " + params(key))
   def contains(key: String) = params.contains(key)
+  def hashId = params.values.mkString(".").hashCode
 }
 
 

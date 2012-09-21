@@ -1,8 +1,11 @@
 package simplexnlp.core
 
 import java.io.{ByteArrayOutputStream, PrintStream}
+import java.util.Random
 
 object Util {
+  def random = new Random(1337)
+
   def suppressConsoleOutput(body: => Any) = {
     val temp = System.err
     System.setErr(new PrintStream(new ByteArrayOutputStream()))
