@@ -287,13 +287,14 @@ object CVEvaluator {
     def F1 = if (P == 0 || R == 0) 0.0 else (2 * P * R)/(P + R)
     (P,R,F1)
   }
-  def printResults(results: List[Tuple3[Double, Double, Double]]) {
+  def getResult(results: List[(Double, Double, Double)]):(Double, Double, Double) = {
     val TP = results.map(_._1).sum
     val FP = results.map(_._2).sum
     val FN = results.map(_._3).sum
     val res = getMetrics(TP.toInt, FP.toInt, FN.toInt)
     println("TP\tFP\tFN\tP\tR\tF1")
     println("%d\t%d\t%d\t%.2f\t%.2f\t%.2f".format(TP.toInt, FP.toInt, FN.toInt, res._1, res._2, res._3))
+    res
   }
 }
 
