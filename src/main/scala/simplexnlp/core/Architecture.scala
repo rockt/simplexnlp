@@ -276,7 +276,7 @@ abstract class Evaluator {
 
   def printResults = {
     println("TP\tFP\tFN\tP\tR\tF1")
-    println("%d\t%d\t%d\t%.2f\t%.2f\t%.2f".format(TP.toInt, FP.toInt, FN.toInt, P, R, F1))
+    println("%d\t%d\t%d\t%.2f\t%.2f\t%.2f".format(TP.toInt, FP.toInt, FN.toInt, P*100, R*100, F1*100))
   }
 }
 
@@ -293,7 +293,7 @@ object CVEvaluator {
     val FN = results.map(_._3).sum
     val res = getMetrics(TP.toInt, FP.toInt, FN.toInt)
     println("TP\tFP\tFN\tP\tR\tF1")
-    println("%d\t%d\t%d\t%.2f\t%.2f\t%.2f".format(TP.toInt, FP.toInt, FN.toInt, res._1, res._2, res._3))
+    println("%d\t%d\t%d\t%.2f\t%.2f\t%.2f".format(TP.toInt, FP.toInt, FN.toInt, res._1*100, res._2*100, res._3*100))
     res
   }
 }
