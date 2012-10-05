@@ -1,8 +1,6 @@
 package simplexnlp.example
 
 import simplexnlp.core._
-import edu.uchsc.ccp.nlp.ei.mutation.MutationFinder
-import simplexnlp.core.Util._
 import simplexnlp.core.{Sentence => GenericSentence}
 import opennlp.tools.sentdetect.{SentenceModel, SentenceDetectorME}
 import java.io.FileInputStream
@@ -136,22 +134,6 @@ class WhiteSpaceTokenizer extends Component {
           //wait for next whitespace
         }
       }
-    }
-  }
-}
-
-class MutationAnnotator extends Component with Parameters {
-  var tagger: MutationFinder = _
-  override def initialize {
-    suppressConsoleOutput {
-      tagger = new MutationFinder(parameters[String]("path"))
-    }
-  }
-  def process(doc: Document) = {
-    import scala.collection.JavaConversions._
-    for (sentence <- doc.sentences; mutations = tagger.extractMutations(sentence.text); mutation <- mutations.keySet(); tuple <- mutations.get(mutation)) {
-      val span = tuple.asInstanceOf[Array[Int]]
-      sentence + Mutation(span(0), span(1)-1)
     }
   }
 }

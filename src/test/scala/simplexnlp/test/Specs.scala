@@ -20,12 +20,10 @@ class Specs extends FunSpec with ShouldMatchers with GivenWhenThen {
   val t = new SimpleTokenizer
   val p = new POSTagger
   p.parameters("path" -> "./ressources/OpenNLP/en-pos-maxent.bin")
-  val m = new MutationAnnotator
   val d = new DummyDiseaseAnnotator
   val c = new CoOccurrenceAnnotator
-  m.parameters("path" -> "./ressources/mutationFinder/regex.txt")
   doc = new Document(ID, text)
-  val pipeline = s ++ t ++ p ++ m ++ d ++ c
+  val pipeline = s ++ t ++ p ++ d ++ c
   pipeline.initialize()
   pipeline.process(doc)
 
