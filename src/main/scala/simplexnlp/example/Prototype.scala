@@ -26,6 +26,10 @@ case class MutationDiseaseRelation(m: Mutation, d: Disease) extends Relation(m, 
   //override def toString: String = "MutationDiseaseRelation: " + m + " - " + d
 }
 
+case class GeneDiseaseRelation(g: Gene, d: Disease) extends Relation(g, d) {
+  override def toString: String = "GDI: " + g + " - " + d + " => " + text
+}
+
 case class Sentence(override val start: Int, override val end: Int) extends GenericSentence(start, end) {
   def genes = children[Gene]
   def mutations = children[Mutation]
