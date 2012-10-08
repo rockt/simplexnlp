@@ -11,6 +11,20 @@ import simplexnlp.example.Disease
 trait ParentOf[C <: Child] {
   private val childrenBuffer = new ListBuffer[C]
   def add(child: C) = {
+    if (child.isInstanceOf[NonOverlappingSpan]) {
+      val thiz = child.asInstanceOf[NonOverlappingSpan]
+      type T = thiz.type
+      require(descendants[T].forall((t:T) => {
+        val that = t.asInstanceOf[NonOverlappingSpan]
+        (thiz.start < that.start || thiz.start > that.start) && (thiz.end <= that.start || thiz.start >= that.end)
+      }), {
+        val overlap = descendants[T].find((t:T) => {
+          val that = t.asInstanceOf[NonOverlappingSpan]
+          !((thiz.start < that.start || thiz.start > that.start) && (thiz.end <= that.start || thiz.start >= that.end))
+        }).get
+        "New span annotation [" + thiz.start + "-" + thiz.end + "]" + " overlaps with " + overlap + " in\n" + this
+      })
+    }
     childrenBuffer += child
     child.parent = this
   }
@@ -129,11 +143,11 @@ class Pipeline(val components: Component*) {
 trait Parameters {
   import scala.collection.mutable.HashMap
   private val params = new HashMap[String, Any]
-  def parameters(tuple: Tuple2[String, _]*): Unit = {
-    tuple.foreach((t: Tuple2[String, _]) => params.put(t._1, t._2.asInstanceOf[Any]))
+  def parameters(tuple: (String, _)*): Unit = {
+    tuple.foreach((t: (String, _)) => params.put(t._1, t._2.asInstanceOf[Any]))
   }
   def parameters[T](key:String):T = params(key).asInstanceOf[T]
-  def add(t: Tuple2[String, _]) = params.put(t._1, t._2.asInstanceOf[Any])
+  def add(t: (String, _)) = params.put(t._1, t._2.asInstanceOf[Any])
   def print() = for (key <- params.keySet.toList.sorted) println(key + " " + params(key))
   def contains(key: String) = params.contains(key)
   def hashId = params.values.mkString(".").hashCode
@@ -148,7 +162,7 @@ abstract class Reader extends Pipeline with Parameters {
 trait Span extends Annotation {
   val start: Int
   val end: Int
-  assert(end - start >= 0, "A span must start before it ends!")
+  require(end - start >= 0, "A span must start before it ends!")
   //TODO: def append
   //TODO: def prepend
   //TODO: def trimStart
@@ -172,20 +186,17 @@ trait Span extends Annotation {
     }
   }
   //FIXME: should be generic
-  def covered = doc.coveredSpans(startInDoc, endInDoc)
+  def covered[T <: Span](implicit mf: Manifest[T]) = doc.coveredSpans[T](startInDoc, endInDoc)
   def text = doc.text.substring(startInDoc, endInDoc+1)
   def length = text.length
   override def toString = getClassName(this) + "[" + start + "-" + end + "]: " + text
 }
 
 trait NonOverlappingSpan extends Span with Ordered[NonOverlappingSpan] {
-  override def compare(that: NonOverlappingSpan): Int = {
-    assert((this.start < that.start || this.start > that.start) && (this.end <= that.start || this.start >= that.end), this + " overlaps " + that)
-    this.start - that.start
-  }
+  override def compare(that: NonOverlappingSpan): Int = this.start - that.start
 }
 
-case class Sentence(start: Int, end: Int) extends NonOverlappingSpan with ParentOf[Annotation] {
+case class Sentence(start: Int, end: Int) extends Span with ParentOf[Annotation] {
   def tokens = children[Token]
   def entities = children[Entity]
   def relations = children[Relation]
@@ -206,6 +217,7 @@ case class Token(start: Int, end: Int) extends NonOverlappingSpan {
 
 //trait Entity extends Span
 trait Entity extends Span
+trait NonOverlappingEntity extends Entity with NonOverlappingSpan
 
 abstract class Relation(entities: Entity*) extends Span {
   //TODO: a relation might have a trigger word
@@ -216,6 +228,7 @@ abstract class Relation(entities: Entity*) extends Span {
 //TODO: implement nested relations
 
 
+//TODO: needs heavy refactoring
 abstract class Evaluator {
   var TP:Double = 0
   var FP:Double = 0
@@ -249,6 +262,7 @@ abstract class Evaluator {
   }
 }
 
+//TODO: needs heavy refactoring
 object CVEvaluator {
   def getMetrics(TP: Double, FP: Double, FN: Double) = {
     def P = TP/(TP + FP)
@@ -267,6 +281,7 @@ object CVEvaluator {
   }
 }
 
+//TODO: needs heavy refactoring
 class NEREvaluator[T <: Span] extends Evaluator {
   def evaluate(gold: Sentence, predicted: Sentence) = {
     //FIXME: generalize this towards T

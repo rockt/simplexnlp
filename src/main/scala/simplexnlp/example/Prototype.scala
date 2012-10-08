@@ -10,7 +10,7 @@ import opennlp.tools.postag.{POSModel, POSTaggerME}
 //example NLP pipeline
 case class Mutation(start: Int, end: Int) extends Entity
 case class Gene(start: Int, end: Int) extends Entity
-case class Disease(start: Int, end: Int) extends Entity {
+case class Disease(start: Int, end: Int) extends NonOverlappingEntity {
   var id:String = ""
 }
 
@@ -23,7 +23,7 @@ case class DDI(a: Drug, b: Drug) extends Relation(a, b) {
   override def toString: String = "DDI: " + a + " - " + b
 }
 case class MutationDiseaseRelation(m: Mutation, d: Disease) extends Relation(m, d) {
-  //override def toString: String = "MutationDiseaseRelation: " + m + " - " + d
+  override def toString: String = "MDI: " + m + " - " + d
 }
 
 case class GeneDiseaseRelation(g: Gene, d: Disease) extends Relation(g, d) {
