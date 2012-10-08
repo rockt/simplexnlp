@@ -35,23 +35,14 @@ trait ParentOf[C <: Child] {
 
 //something that has a parent
 trait Child {
-  var parent: Any = _
-}
-
-//stores predictions by NLP components
-trait Prediction {
-  private var pred:Any = _
-  def prediction_=(p:Any) = { pred = p }
-  def prediction[T]():T = pred.asInstanceOf[T]
+  var parent: AnyRef = _
 }
 
 //an annotation refers to a document and might be nested in another annotation
-trait Annotation extends Child with Prediction {
-  //TODO: we need a flag that distinguishes between predictions and goldstandard
+trait Annotation extends Child {
   //get the document (root ancestor)
   def doc: Document = {
     if (parent.isInstanceOf[Document]) parent.asInstanceOf[Document]
-    //recursion
     else parent.asInstanceOf[Annotation].doc
   }
 }
@@ -62,13 +53,7 @@ trait Annotation extends Child with Prediction {
 class Document(val id: String, val text: String) extends Annotation with ParentOf[Annotation] {
   override def doc = this
   def sentences = children[Sentence]
-  //FIXME: should be generic
-  def coveredSpans(start:Int, end:Int):List[Span] = descendants[Span].filter((s:Span) => (s.startInDoc >= start && s.endInDoc <= end))
-//  def reset[T <: Annotation](implicit mf: Manifest[T]) = {
-//    for (sentence <- sentences; t <- sentence.children[T]) {
-//      sentence - t
-//    }
-//  }
+  def coveredSpans[T <: Span](start:Int, end:Int)(implicit mf: Manifest[T]):List[T] = descendants[T].filter((s:T) => (s.startInDoc >= start && s.endInDoc <= end))
 }
 
 class Corpus extends ArrayBuffer[Document] {
@@ -104,10 +89,9 @@ class Corpus extends ArrayBuffer[Document] {
 //TODO: implement Input und Output type specification
 //a NLP component
 abstract class Component {
-  //a concrete component needs to override this method
-  def process(doc: Document)
+  def process(doc: Document) //a concrete component needs to override this method
   def initialize() {
-    //something to do before start processing (e.g. loading parameters)
+    //something to do before start of processing (e.g. loading parameters)
   }
   def preHook() {
     //something to do before each call of process
@@ -117,21 +101,22 @@ abstract class Component {
   }
 }
 
-//FIXME: uptil now theres is no real pipelining! use actors!
+//FIXME: until now there is no real pipelining! use actors!
 //a chain of NLP components
-class Pipeline(comps: Component*) {
-  var components = comps.toList
+class Pipeline(val components: Component*) {
   def ++(that: Pipeline) = new Pipeline((this.components ++ that.components): _*)
   def process(doc: Document):Unit = {
     components.foreach((c: Component) => {
-      c.preHook()
-      c.process(doc)
-      c.postHook()
+      if (!c.isInstanceOf[Reader]) {
+        c.preHook()
+        c.process(doc)
+        c.postHook()
+      }
     })
   }
   def process():Unit = {
     components.head match {
-      case r:Reader => r.process()
+      case r: Reader => r.read.foreach(process(_))
       case _ => throw new IllegalStateException("The first component has to be a Reader if you want to use this method!")
     }
   }
@@ -143,37 +128,21 @@ class Pipeline(comps: Component*) {
 //TODO: there has to be a more elegant way
 trait Parameters {
   import scala.collection.mutable.HashMap
-  private val params = new HashMap[String, AnyVal]
+  private val params = new HashMap[String, Any]
   def parameters(tuple: Tuple2[String, _]*): Unit = {
-    tuple.foreach((t: Tuple2[String, _]) => params.put(t._1, t._2.asInstanceOf[AnyVal]))
+    tuple.foreach((t: Tuple2[String, _]) => params.put(t._1, t._2.asInstanceOf[Any]))
   }
   def parameters[T](key:String):T = params(key).asInstanceOf[T]
-  def add(t: Tuple2[String, _]) = params.put(t._1, t._2.asInstanceOf[AnyVal])
+  def add(t: Tuple2[String, _]) = params.put(t._1, t._2.asInstanceOf[Any])
   def print() = for (key <- params.keySet.toList.sorted) println(key + " " + params(key))
   def contains(key: String) = params.contains(key)
   def hashId = params.values.mkString(".").hashCode
 }
 
-
-//TODO: think of a more elegant implementation!
 abstract class Reader extends Pipeline with Parameters {
-  //FIXME: a reader alone should initialize itself
   def read:Corpus = read(parameters[String]("path"))
-  //TODO: would be nicer to have an Iterator here!
   def read(path:String):Corpus
-  def documents:Corpus = {
-    val docs = read
-    for (doc <- docs) super.process(doc)
-    docs
-  }
-  override def process():Unit = for (doc <- read) super.process(doc)
-  override def ++(that: Pipeline):Pipeline = {
-    components = this.components ++ that.components
-    this
-  }
-  override def process(doc:Document) = {
-    //do nothing
-  }
+  override def process(doc:Document) = throw new IllegalArgumentException("A reader does not process documents!")
 }
 
 trait Span extends Annotation {
