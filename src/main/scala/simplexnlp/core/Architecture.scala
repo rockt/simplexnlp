@@ -224,7 +224,7 @@ case class Sentence(start: Int, end: Int) extends Span with ParentOf[Annotation]
       this + span
     }
   }
-  def addAndResolveOverlaps[T <: Span](span: T)(implicit mf: Manifest[T]) = addAndResolveOverlaps[T](span, preferLongerMatches)
+  def addAndResolveOverlaps[T <: Span](span: T)(implicit mf: Manifest[T]) = addAndResolveOverlaps[T](span, preferLongerMatches _)
 }
 
 case class Token(start: Int, end: Int) extends NonOverlappingSpan {
