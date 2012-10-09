@@ -41,6 +41,7 @@ class Specs extends FunSpec with ShouldMatchers with GivenWhenThen {
       }
     }
     it ("should tokenize correctly") {
+      pending
       for (sentence <- doc.sentences)
         println(sentence.tokens)
     }
@@ -49,6 +50,24 @@ class Specs extends FunSpec with ShouldMatchers with GivenWhenThen {
   describe("An annotation") {
     it ("can have nested annotations") {
       pending
+    }
+  }
+
+  describe("Span") {
+    it ("has correct length") {
+      val text = "This is a test."
+      val doc = new Document("0", text)
+      val sentence = new Sentence(0, text.length)
+      doc + sentence
+      val s1 = new Disease(0,4)
+      val s2 = new Disease(8,9)
+      sentence + s1
+      sentence + s2
+      assert(s1.length === 4)
+      assert(s2.length === 1)
+      val overlap = new Disease(8,14)
+      sentence.addAndResolveOverlaps(overlap)
+      assert(sentence.diseases(1) === overlap)
     }
   }
 }

@@ -190,7 +190,7 @@ trait Span extends Annotation {
   }
   def covered[T <: Span](implicit mf: Manifest[T]) = doc.coveredSpans[T](startInDoc, endInDoc)
   def text = doc.text.substring(startInDoc, endInDoc+1)
-  def length = text.length
+  def length = end - start
   override def toString = getClassName(this) + "[" + start + "-" + end + "]: " + text
 }
 
@@ -216,15 +216,21 @@ case class Sentence(start: Int, end: Int) extends Span with ParentOf[Annotation]
     })
   }
   def preferLongerMatches(s1: Span, s2: Span) = s1.length > s2.length
-  def addAndResolveOverlaps[T <: Span](span: T, resolver:(T,T) => Boolean)(implicit mf: Manifest[T]) = {
+  //returns true iff span was added   ü
+  def addAndResolveOverlaps[T <: Span](span: T, resolver:(T,T) => Boolean)(implicit mf: Manifest[T]):Boolean = {
     val overlaps = overlapping[T](span)
-    if (overlaps.isEmpty) this + span
-    else if (overlaps.forall(resolver(span, _))) {
+    if (overlaps.isEmpty) {
+      this + span
+      true
+    } else if (overlaps.forall(resolver(span, _))) {
       overlaps.foreach(this - _)
       this + span
+      true
+    } else {
+      false
     }
   }
-  def addAndResolveOverlaps[T <: Span](span: T)(implicit mf: Manifest[T]) = addAndResolveOverlaps[T](span, preferLongerMatches _)
+  def addAndResolveOverlaps[T <: Span](span: T)(implicit mf: Manifest[T]):Boolean = addAndResolveOverlaps[T](span, preferLongerMatches _)
 }
 
 case class Token(start: Int, end: Int) extends NonOverlappingSpan {
