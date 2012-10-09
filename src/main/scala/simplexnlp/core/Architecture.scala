@@ -11,16 +11,19 @@ import simplexnlp.example.Disease
 trait ParentOf[C <: Child] {
   private val childrenBuffer = new ListBuffer[C]
   def add(child: C) = {
+    //TODO: not very elegant to do this here
     if (child.isInstanceOf[NonOverlappingSpan]) {
       val thiz = child.asInstanceOf[NonOverlappingSpan]
       type T = thiz.type
       require(descendants[T].forall((t:T) => {
         val that = t.asInstanceOf[NonOverlappingSpan]
-        (thiz.start < that.start || thiz.start > that.start) && (thiz.end <= that.start || thiz.start >= that.end)
+        //(thiz.start < that.start || thiz.start > that.start) && (thiz.end <= that.start || thiz.start >= that.end)
+        thiz.end < that.start || thiz.start > that.end
       }), {
         val overlap = descendants[T].find((t:T) => {
           val that = t.asInstanceOf[NonOverlappingSpan]
-          !((thiz.start < that.start || thiz.start > that.start) && (thiz.end <= that.start || thiz.start >= that.end))
+          //!((thiz.start < that.start || thiz.start > that.start) && (thiz.end <= that.start || thiz.start >= that.end))
+          !(thiz.end < that.start || thiz.start > that.end)
         }).get
         "New span annotation [" + thiz.start + "-" + thiz.end + "]" + " overlaps with " + overlap + " in\n" + this
       })
@@ -185,7 +188,6 @@ trait Span extends Annotation {
       case doc:Document => end
     }
   }
-  //FIXME: should be generic
   def covered[T <: Span](implicit mf: Manifest[T]) = doc.coveredSpans[T](startInDoc, endInDoc)
   def text = doc.text.substring(startInDoc, endInDoc+1)
   def length = text.length
@@ -208,27 +210,40 @@ case class Sentence(start: Int, end: Int) extends Span with ParentOf[Annotation]
     }
     super.add(child)
   }
+  def overlapping[T <: Span](span: T)(implicit mf: Manifest[T]) = {
+    children[T].filter((t:T) => {
+      !(span.end < t.start || span.start > t.end)
+    })
+  }
+  def preferLongerMatches(s1: Span, s2: Span) = s1.length > s2.length
+  def addAndResolveOverlaps[T <: Span](span: T, resolver:(T,T) => Boolean)(implicit mf: Manifest[T]) = {
+    val overlaps = overlapping[T](span)
+    if (overlaps.isEmpty) this + span
+    else if (overlaps.forall(resolver(span, _))) {
+      overlaps.foreach(this - _)
+      this + span
+    }
+  }
+  def addAndResolveOverlaps[T <: Span](span: T)(implicit mf: Manifest[T]) = addAndResolveOverlaps[T](span, preferLongerMatches)
 }
 
 case class Token(start: Int, end: Int) extends NonOverlappingSpan {
-  var pos: String = _
-  var index: Int = _
+  var pos = ""
+  var index = 0
 }
 
-//trait Entity extends Span
-trait Entity extends Span
+trait Entity extends Span { var id = "" }
 trait NonOverlappingEntity extends Entity with NonOverlappingSpan
 
 abstract class Relation(entities: Entity*) extends Span {
   //TODO: a relation might have a trigger word
-  val start = entities.sortBy(_.startInDoc).head.start
-  val end = entities.sortBy(_.endInDoc).last.end
+  override val start = entities.sortBy(_.startInDoc).head.start
+  override val end = entities.sortBy(_.endInDoc).last.end
 }
 
 //TODO: implement nested relations
 
-
-//TODO: needs heavy refactoring
+//TODO: needs heavy refactoring — way too much boilercode
 abstract class Evaluator {
   var TP:Double = 0
   var FP:Double = 0
@@ -246,7 +261,6 @@ abstract class Evaluator {
     for (i <- 0 until gold.size) {
       val goldDoc = gold(i)
       val predictedDoc = predicted.find(_.id == goldDoc.id).get
-      assert(goldDoc.id == predictedDoc.id, "IDs of documents don't match: " + gold(i).id + " vs. " + predictedDoc.id)
       assert(goldDoc.sentences.size == predictedDoc.sentences.size)
       for (j <- 0 until goldDoc.sentences.size) {
         assert(goldDoc.sentences(j).tokens.size == predictedDoc.sentences(j).tokens.size)

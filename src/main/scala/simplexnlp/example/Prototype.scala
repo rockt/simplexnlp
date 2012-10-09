@@ -8,13 +8,10 @@ import simplexnlp.example.Implicits._
 import opennlp.tools.postag.{POSModel, POSTaggerME}
 
 //example NLP pipeline
-case class Mutation(start: Int, end: Int) extends Entity
-case class Gene(start: Int, end: Int) extends Entity
-case class Disease(start: Int, end: Int) extends NonOverlappingEntity {
-  var id:String = ""
-}
-
-case class Drug(start: Int, end: Int) extends Entity
+case class Mutation(start: Int, end: Int) extends NonOverlappingEntity
+case class Gene(start: Int, end: Int) extends NonOverlappingEntity
+case class Disease(start: Int, end: Int) extends NonOverlappingEntity
+case class Drug(start: Int, end: Int) extends NonOverlappingEntity
 
 case class PPI(a: Gene, b: Gene) extends Relation(a, b) {
   override def toString: String = "PPI: " + a + " - " + b
