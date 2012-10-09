@@ -2,7 +2,7 @@ package simplexnlp.test
 
 import org.scalatest.{GivenWhenThen, FunSpec}
 import org.scalatest.matchers.ShouldMatchers
-import simplexnlp.core.Document
+import simplexnlp.core.{Token, Document}
 import simplexnlp.core.Implicits._
 import simplexnlp.example.Implicits._
 import simplexnlp.example._
@@ -55,6 +55,7 @@ class Specs extends FunSpec with ShouldMatchers with GivenWhenThen {
 
   describe("Span") {
     it ("has correct length") {
+      pending
       val text = "This is a test."
       val doc = new Document("0", text)
       val sentence = new Sentence(0, text.length)
@@ -68,6 +69,33 @@ class Specs extends FunSpec with ShouldMatchers with GivenWhenThen {
       val overlap = new Disease(8,14)
       sentence.addAndResolveOverlaps(overlap)
       assert(sentence.diseases(1) === overlap)
+    }
+  }
+
+  describe("Parent") {
+    it("copies correctly") {
+      val text = "This is a test."
+      val doc = new Document("0", text)
+      val sentence = new Sentence(0, text.length-1)
+      doc + sentence
+      sentence + Gene(5,6)
+      sentence + Token(0,3)
+      sentence + Token(5,6)
+      sentence + Token(8,8)
+      sentence + Token(10,13)
+      sentence + Token(14,14) //FIXME: here is a bug!
+      sentence + Disease(0,3)
+      sentence + Disease(8,8)
+      val docCopy:Document = doc.copyAndFilter(Gene)
+      val d1 = doc.descendants.last.asInstanceOf[Disease]
+      d1.id = "foo"
+      val d2 = docCopy.descendants.last.asInstanceOf[Disease]
+      d2.id = "bar"
+      println(d1 + " " + doc.descendants.last.asInstanceOf[Disease].id)
+      println(d2 + " " + docCopy.descendants.last.asInstanceOf[Disease].id)
+      doc.removeChildrenByTypes(Token)
+      println(doc.descendants)
+      println(docCopy.descendants)
     }
   }
 }

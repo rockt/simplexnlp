@@ -2,7 +2,6 @@ package simplexnlp.core
 
 import simplexnlp.core.Util._
 import collection.mutable.{ArrayBuffer, ListBuffer}
-import simplexnlp.example.Disease
 
 //TODO: class Workflow
 //TODO: def |(that:Workflow)
@@ -15,16 +14,16 @@ trait ParentOf[C <: Child] {
     if (child.isInstanceOf[NonOverlappingSpan]) {
       val thiz = child.asInstanceOf[NonOverlappingSpan]
       type T = thiz.type
-      require(descendants[T].forall((t:T) => {
-        val that = t.asInstanceOf[NonOverlappingSpan]
-        //(thiz.start < that.start || thiz.start > that.start) && (thiz.end <= that.start || thiz.start >= that.end)
-        thiz.end < that.start || thiz.start > that.end
-      }), {
+      require(
+        descendants[T].forall((t:T) => {
+          val that = t.asInstanceOf[NonOverlappingSpan]
+          thiz.end < that.start || thiz.start > that.end
+        })
+      , {
         val overlap = descendants[T].find((t:T) => {
           val that = t.asInstanceOf[NonOverlappingSpan]
-          //!((thiz.start < that.start || thiz.start > that.start) && (thiz.end <= that.start || thiz.start >= that.end))
-          !(thiz.end < that.start || thiz.start > that.end)
-        }).get
+          !(thiz.end < that.start || thiz.start > that.end)}
+        ).get
         "New span annotation [" + thiz.start + "-" + thiz.end + "]" + " overlaps with " + overlap + " in\n" + this
       })
     }
@@ -32,8 +31,10 @@ trait ParentOf[C <: Child] {
     child.parent = this
   }
   def remove(child: C) = {
-    childrenBuffer -= child
-    child.parent = null
+    if (childrenBuffer.contains(child)) {
+      childrenBuffer -= child
+      child.parent = null
+    }
   }
   def +(child: C) = add(child)
   def -(child: C) = remove(child)
@@ -48,11 +49,25 @@ trait ParentOf[C <: Child] {
   }
   def children[T](implicit mf: Manifest[T]) = filterByType[T](childrenBuffer.toList)
   def descendants[T](implicit mf: Manifest[T]) = filterByType[T](gatherDescendants)
+  private def deepCopy[A](a: A)(implicit m: reflect.Manifest[A]): A = util.Marshal.load[A](util.Marshal.dump(a))
+  //slow but beautiful
+  def copy(implicit m: reflect.Manifest[this.type]):this.type = deepCopy[this.type](this)
+  def copyAndFilter[T <: ScalaObject](types: T*):this.type = {
+    val temp = this.copy
+    temp.removeChildrenByTypes(types: _*)
+    temp
+  }
+  def removeChildrenByTypes[T <: ScalaObject](types: T*): Unit = {
+    for (child <- childrenBuffer)
+      if (child.isInstanceOf[ParentOf[_]]) child.asInstanceOf[ParentOf[_]].removeChildrenByTypes(types: _*)
+      //FIXME: that comparison is not safe at all!
+      else if (types.exists(_.toString == getClassName(child))) this - child
+  }
 }
 
 //something that has a parent
-trait Child {
-  var parent: AnyRef = _
+trait Child extends Serializable {
+  var parent: AnyRef = _ //TODO: better Any?
 }
 
 //an annotation refers to a document and might be nested in another annotation
@@ -248,41 +263,51 @@ abstract class Relation(entities: Entity*) extends Span {
 }
 
 //TODO: implement nested relations
-
-//TODO: needs heavy refactoring — way too much boilercode
 abstract class Evaluator {
-  var TP:Double = 0
-  var FP:Double = 0
-  var FN:Double = 0
+  var TP, FP, FN = 0.0
   def P = TP/(TP + FP)
   def R = TP/(TP + FN)
   def F1 = (2 * P * R)/(P + R)
-
-  def evaluate(gold: Sentence, predicted: Sentence)
-
+  def evaluate(gold: Sentence, predicted: Sentence) //concrete class needs to provide an implementation
   def evaluate(goldCorpus:Corpus, predictedCorpus:Corpus) {
+    require(goldCorpus.size == predictedCorpus.size)
     val gold = goldCorpus.sortBy(_.id)
     val predicted = predictedCorpus.sortBy(_.id)
-    assert(gold.size == predicted.size)
     for (i <- 0 until gold.size) {
       val goldDoc = gold(i)
       val predictedDoc = predicted.find(_.id == goldDoc.id).get
-      assert(goldDoc.sentences.size == predictedDoc.sentences.size)
+      require(goldDoc.sentences.size == predictedDoc.sentences.size)
       for (j <- 0 until goldDoc.sentences.size) {
-        assert(goldDoc.sentences(j).tokens.size == predictedDoc.sentences(j).tokens.size)
+        require(goldDoc.sentences(j).tokens.size == predictedDoc.sentences(j).tokens.size)
         evaluate(goldDoc.sentences(j), predictedDoc.sentences(j))
       }
     }
-    //printResults
   }
-
   def printResults = {
     println("TP\tFP\tFN\tP\tR\tF1")
     println("%d\t%d\t%d\t%.2f\t%.2f\t%.2f".format(TP.toInt, FP.toInt, FN.toInt, P*100, R*100, F1*100))
   }
 }
 
+class NEREvaluator[T <: Entity](implicit mf: Manifest[T]) extends Evaluator {
+  //TODO: try soft bounds
+  private def same(a:T, b:T):Boolean = a.start == b.start && a.end == b.end
+  override def evaluate(gold: Sentence, predicted: Sentence) = {
+    val goldEntities = gold.children[T]
+    val predictedEntities = predicted.children[T]
+    val currentTP = goldEntities.filter((g:T) => predictedEntities.exists((p:T) => same(g, p))).size
+    val currentFP = predictedEntities.filter((p:T) => !goldEntities.exists((g:T) => same(g, p))).size
+    val currentFN = goldEntities.filter((g:T) => !predictedEntities.exists((p:T) => same(g, p))).size
+    assert(currentTP + currentFP == predictedEntities.size)
+    assert(currentTP + currentFN == goldEntities.size)
+    FP += currentFP
+    FN += currentFN
+  }
+}
+
+
 //TODO: needs heavy refactoring
+//TODO: calculate macro-avg, mean and variance
 object CVEvaluator {
   def getMetrics(TP: Double, FP: Double, FN: Double) = {
     def P = TP/(TP + FP)
@@ -298,30 +323,5 @@ object CVEvaluator {
     println("TP\tFP\tFN\tP\tR\tF1")
     println("%d\t%d\t%d\t%.2f\t%.2f\t%.2f".format(TP.toInt, FP.toInt, FN.toInt, res._1*100, res._2*100, res._3*100))
     res
-  }
-}
-
-//TODO: needs heavy refactoring
-class NEREvaluator[T <: Span] extends Evaluator {
-  def evaluate(gold: Sentence, predicted: Sentence) = {
-    //FIXME: generalize this towards T
-    val goldEntities = gold.children[Disease]
-    val predictedEntities = predicted.children[Disease]
-    val currentTP = goldEntities.filter((g:Disease) => predictedEntities.exists((p:Disease) => g.start == p.start && g.end == p.end)).size
-    val currentFP = predictedEntities.filter((p:Disease) => !goldEntities.exists((g:Disease) => g.start == p.start && g.end == p.end)).size
-    val currentFN = goldEntities.filter((g:Disease) => !predictedEntities.exists((p:Disease) => g.start == p.start && g.end == p.end)).size
-    TP += currentTP
-    FP += currentFP
-    FN += currentFN
-    assert(currentTP + currentFP == predictedEntities.size, {
-      (currentTP + currentFP) + " vs. " + predictedEntities.size + "\n" +
-        "gold: " + goldEntities + "\n" +
-        "predict: " + predictedEntities + "\n"
-    })
-    assert(currentTP + currentFN == goldEntities.size, {
-      (currentTP + currentFN) + " vs. " + goldEntities.size + "\n" +
-        "gold: " + goldEntities + "\n" +
-        "predict: " + predictedEntities + "\n"
-    })
   }
 }
