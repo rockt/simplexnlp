@@ -6,6 +6,8 @@ import collection.mutable.{ArrayBuffer, ListBuffer}
 //TODO: class Workflow
 //TODO: def |(that:Workflow)
 
+//FIXME: determine when to use Any, AnyRef or AnyVal!
+
 //something that has children
 trait ParentOf[C <: Child] {
   private val childrenBuffer = new ListBuffer[C]
@@ -57,10 +59,8 @@ trait ParentOf[C <: Child] {
     for (child <- childrenBuffer)
       child match {
         case parent:ParentOf[_] => parent.removeChildrenByTypes(types: _*)
-        case _ => {
-          //FIXME: that comparison is not safe at all!
-          if (types.exists(_.toString == getClassName(child))) this - child
-        }
+        //FIXME: this comparison is not safe at all!
+        case _ => if (types.exists(_.toString == getClassName(child))) this - child
       }
   }
 }
@@ -118,15 +118,9 @@ class Corpus extends ArrayBuffer[Document] {
 //a NLP component
 abstract class Component {
   def process(doc: Document) //a concrete component needs to override this method
-  def initialize() {
-    //something to do before start of processing (e.g. loading parameters)
-  }
-  def preHook() {
-    //something to do before each call of process
-  }
-  def postHook() {
-    //something to do after each call of process
-  }
+  def initialize() { } //something to do before start of processing (e.g. loading parameters)
+  def preHook() { } //something to do before each call of process
+  def postHook() { } //something to do after each call of process
 }
 
 //FIXME: until now there is no real pipelining! use actors!
@@ -157,9 +151,8 @@ class Pipeline(val components: Component*) {
 trait Parameters {
   import scala.collection.mutable.HashMap
   private val params = new HashMap[String, Any]
-  def parameters(tuple: (String, _)*): Unit = {
+  def parameters(tuple: (String, _)*) =
     tuple.foreach((t: (String, _)) => params.put(t._1, t._2.asInstanceOf[Any]))
-  }
   //this assumes that you know what you are doing when asking for a parameter of a specific type
   def parameters[T](key:String):T = params(key).asInstanceOf[T]
   def add(t: (String, _)) = params.put(t._1, t._2.asInstanceOf[Any])
@@ -212,10 +205,7 @@ case class Sentence(start: Int, end: Int) extends Span with ParentOf[Annotation]
   private var numTokens = 0
   override def add(child: Annotation) = {
     child match {
-      case token:Token => {
-        token.index = numTokens
-        numTokens += 1
-      }
+      case token:Token => { token.index = numTokens; numTokens += 1 }
       case _ => //proceed
     }
     super.add(child)
@@ -226,16 +216,9 @@ case class Sentence(start: Int, end: Int) extends Span with ParentOf[Annotation]
   //returns true iff span was added
   def addAndResolveOverlaps[T <: Span](span: T, resolver:(T,T) => Boolean)(implicit mf: Manifest[T]):Boolean = {
     val overlaps = overlapping[T](span)
-    if (overlaps.isEmpty) {
-      this + span
-      true
-    } else if (overlaps.forall(resolver(span, _))) {
-      overlaps.foreach(this - _)
-      this + span
-      true
-    } else {
-      false
-    }
+    if (overlaps.isEmpty) { this + span; true }
+    else if (overlaps.forall(resolver(span, _))) { overlaps.foreach(this - _); this + span; true }
+    else false
   }
   def addAndResolveOverlaps[T <: Span](span: T)(implicit mf: Manifest[T]):Boolean = addAndResolveOverlaps[T](span, preferLongerMatches _)
 }
