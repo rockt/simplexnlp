@@ -178,7 +178,7 @@ abstract class Reader extends Pipeline with Parameters {
 trait Span extends Annotation {
   val start: Int
   val end: Int
-  require(end - start >= 0, "A span must start before it ends!")
+  require(start <= end, "A span must start before it ends!")
   //TODO: def append
   //TODO: def prepend
   //TODO: def trimStart
@@ -254,14 +254,44 @@ abstract class Relation(entities: Entity*) extends Span {
   override val end = entities.sortBy(_.endInDoc).last.end
 }
 
+
+case class Result(TP: Int, FP: Int, FN: Int) {
+  lazy val P = TP.toDouble/(TP + FP)
+  lazy val R = TP.toDouble/(TP + FN)
+  lazy val F1 = (2 * P * R)/(P + R)
+  def print() {
+    println("TP\tFP\tFN\tP\tR\tF1")
+    println(toString)
+  }
+  override def toString = "%d\t%d\t%d\t%.4f\t%.4f\t%.4f".format(TP, FP, FN, P, R, F1)
+}
+
+case class MicroAvgResult(results:List[Result]) extends Result(
+  results.map(_.TP).sum,
+  results.map(_.FP).sum,
+  results.map(_.FN).sum
+) {
+  def +(that: MicroAvgResult) = MicroAvgResult(this.results ++ that.results)
+}
+
+case class MacroAvgResult(results:List[Result]) extends Result(1, 0, 0) {
+  override lazy val P = mean(_.P)
+  override lazy val R = mean(_.R)
+  override lazy val F1 = mean(_.F1)
+  def mean(mapping: Result => Double) = results.map(mapping).sum/results.size
+  def variance(mapping: Result => Double) = results.map(mapping).map(_ - mapping(this.asInstanceOf[Result])).map(math.pow(_, 2)).sum
+  def sd(mapping: Result => Double) = math.sqrt(variance(mapping))
+  def +(that: MacroAvgResult) = MacroAvgResult(this.results ++ that.results)
+}
+
 //TODO: implement nested relations
+
+//TODO: generalize this towards other metrics
 abstract class Evaluator {
-  var TP, FP, FN = 0.0
-  def P = TP/(TP + FP)
-  def R = TP/(TP + FN)
-  def F1 = (2 * P * R)/(P + R)
+  var TP, FP, FN = 0
+  var result:Result = _
   def evaluate(gold: Sentence, predicted: Sentence) //concrete class needs to provide an implementation
-  def evaluate(goldCorpus:Corpus, predictedCorpus:Corpus) {
+  def evaluate(goldCorpus:Corpus, predictedCorpus:Corpus):Result = {
     require(goldCorpus.size == predictedCorpus.size)
     val gold = goldCorpus.sortBy(_.id)
     val predicted = predictedCorpus.sortBy(_.id)
@@ -269,22 +299,20 @@ abstract class Evaluator {
       val goldDoc = gold(i)
       val predictedDoc = predicted.find(_.id == goldDoc.id).get
       require(goldDoc.sentences.size == predictedDoc.sentences.size)
+      //TODO: what if we have to evaluate on the document-level?
       for (j <- 0 until goldDoc.sentences.size) {
         require(goldDoc.sentences(j).tokens.size == predictedDoc.sentences(j).tokens.size)
         evaluate(goldDoc.sentences(j), predictedDoc.sentences(j))
       }
     }
-  }
-  def printResults = {
-    println("TP\tFP\tFN\tP\tR\tF1")
-    println("%d\t%d\t%d\t%.2f\t%.2f\t%.2f".format(TP.toInt, FP.toInt, FN.toInt, P*100, R*100, F1*100))
+    Result(TP, FP, FN)
   }
 }
 
 class NEREvaluator[T <: Entity](implicit mf: Manifest[T]) extends Evaluator {
   //TODO: try soft bounds
   private def same(a:T, b:T):Boolean = a.start == b.start && a.end == b.end
-  override def evaluate(gold: Sentence, predicted: Sentence) = {
+  override def evaluate(gold: Sentence, predicted: Sentence) {
     val goldEntities = gold.children[T]
     val predictedEntities = predicted.children[T]
     val currentTP = goldEntities.filter((g:T) => predictedEntities.exists((p:T) => same(g, p))).size
@@ -294,26 +322,5 @@ class NEREvaluator[T <: Entity](implicit mf: Manifest[T]) extends Evaluator {
     assert(currentTP + currentFN == goldEntities.size)
     FP += currentFP
     FN += currentFN
-  }
-}
-
-
-//TODO: needs heavy refactoring
-//TODO: calculate macro-avg, mean and variance
-object CVEvaluator {
-  def getMetrics(TP: Double, FP: Double, FN: Double) = {
-    def P = TP/(TP + FP)
-    def R = TP/(TP + FN)
-    def F1 = if (P == 0 || R == 0) 0.0 else (2 * P * R)/(P + R)
-    (P,R,F1)
-  }
-  def getResult(results: List[(Double, Double, Double)]):(Double, Double, Double) = {
-    val TP = results.map(_._1).sum
-    val FP = results.map(_._2).sum
-    val FN = results.map(_._3).sum
-    val res = getMetrics(TP.toInt, FP.toInt, FN.toInt)
-    println("TP\tFP\tFN\tP\tR\tF1")
-    println("%d\t%d\t%d\t%.2f\t%.2f\t%.2f".format(TP.toInt, FP.toInt, FN.toInt, res._1*100, res._2*100, res._3*100))
-    res
   }
 }
