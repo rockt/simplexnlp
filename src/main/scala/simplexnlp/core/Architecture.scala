@@ -11,21 +11,15 @@ trait ParentOf[C <: Child] {
   private val childrenBuffer = new ListBuffer[C]
   def add(child: C) = {
     //TODO: not very elegant to do this here
-    if (child.isInstanceOf[NonOverlappingSpan]) {
-      val thiz = child.asInstanceOf[NonOverlappingSpan]
-      type T = thiz.type
-      require(
-        descendants[T].forall((t:T) => {
-          val that = t.asInstanceOf[NonOverlappingSpan]
-          thiz.end < that.start || thiz.start > that.end
+    child match {
+      case thiz:NonOverlappingSpan => {
+        type T = thiz.type
+        require(descendants[T].forall((that:T) => thiz.end < that.start || thiz.start > that.end), {
+          val overlap = descendants[T].find((that:T) => !(thiz.end < that.start || thiz.start > that.end)).get
+          "New span annotation [" + thiz.start + "-" + thiz.end + "]" + " overlaps with " + overlap + " in\n" + this
         })
-      , {
-        val overlap = descendants[T].find((t:T) => {
-          val that = t.asInstanceOf[NonOverlappingSpan]
-          !(thiz.end < that.start || thiz.start > that.end)}
-        ).get
-        "New span annotation [" + thiz.start + "-" + thiz.end + "]" + " overlaps with " + overlap + " in\n" + this
-      })
+      }
+      case _ => //proceed
     }
     childrenBuffer += child
     child.parent = this
@@ -40,15 +34,17 @@ trait ParentOf[C <: Child] {
   def -(child: C) = remove(child)
   private def gatherDescendants: List[C] = {
     val buffer = new ListBuffer[C]
-    for (child <- this.asInstanceOf[ParentOf[C]].childrenBuffer) {
+    for (child:C <- childrenBuffer) {
       buffer.append(child)
-      //recursion
-      if (child.isInstanceOf[ParentOf[C]]) buffer.appendAll(child.asInstanceOf[ParentOf[C]].gatherDescendants)
+      child match {
+        case parent:ParentOf[C] => buffer.appendAll(parent.gatherDescendants)
+        case _ => //proceed
+      }
     }
     buffer.toList
   }
-  def children[T](implicit mf: Manifest[T]) = filterByType[T](childrenBuffer.toList)
-  def descendants[T](implicit mf: Manifest[T]) = filterByType[T](gatherDescendants)
+  def children[T](implicit mf: Manifest[T]):List[T] = filterByType[T](childrenBuffer.toList)
+  def descendants[T](implicit mf: Manifest[T]):List[T] = filterByType[T](gatherDescendants)
   private def deepCopy[A](a: A)(implicit m: reflect.Manifest[A]): A = util.Marshal.load[A](util.Marshal.dump(a))
   //slow but beautiful
   def copy(implicit m: reflect.Manifest[this.type]):this.type = deepCopy[this.type](this)
@@ -59,9 +55,13 @@ trait ParentOf[C <: Child] {
   }
   def removeChildrenByTypes[T <: ScalaObject](types: T*): Unit = {
     for (child <- childrenBuffer)
-      if (child.isInstanceOf[ParentOf[_]]) child.asInstanceOf[ParentOf[_]].removeChildrenByTypes(types: _*)
-      //FIXME: that comparison is not safe at all!
-      else if (types.exists(_.toString == getClassName(child))) this - child
+      child match {
+        case parent:ParentOf[_] => parent.removeChildrenByTypes(types: _*)
+        case _ => {
+          //FIXME: that comparison is not safe at all!
+          if (types.exists(_.toString == getClassName(child))) this - child
+        }
+      }
   }
 }
 
@@ -74,12 +74,12 @@ trait Child extends Serializable {
 trait Annotation extends Child {
   //get the document (root ancestor)
   def doc: Document = {
-    if (parent.isInstanceOf[Document]) parent.asInstanceOf[Document]
-    else parent.asInstanceOf[Annotation].doc
+    parent match {
+      case doc:Document => doc
+      case annot:Annotation => annot.doc
+    }
   }
 }
-
-
 
 //a document with a text and annotations
 class Document(val id: String, val text: String) extends Annotation with ParentOf[Annotation] {
@@ -91,26 +91,22 @@ class Document(val id: String, val text: String) extends Annotation with ParentO
 class Corpus extends ArrayBuffer[Document] {
   def shuffled(seed: Int):Array[Document] = {
     val random = new scala.util.Random(seed)
-
     //Fisher Yates Shuffle from: http://jdleesmiller.blogspot.de/2008/12/shuffles-surprises-and-scala.html
     def fisherYatesShuffle[T](xs: Array[T]) = {
       for (i <- xs.indices.reverse)
         swap(xs, i, random.nextInt(i + 1))
     }
-
     def swap[T](xs: Array[T], i: Int, j: Int) = {
       val t = xs(i)
       xs(i) = xs(j)
       xs(j) = t
     }
-
     val temp = this.toArray
     fisherYatesShuffle(temp)
     temp
   }
-
   def round[T](l: List[T], n: Int) = (0 until n).map{ i => l.drop(i).sliding(1, n).flatten.toList }.toList
-
+  //TODO: this should return an Array[Corpus]
   def split(parts: Int, seed:Int):Array[Array[Document]] = {
     val temp = shuffled(seed)
     val splits = round(temp.toList, parts)
@@ -164,6 +160,7 @@ trait Parameters {
   def parameters(tuple: (String, _)*): Unit = {
     tuple.foreach((t: (String, _)) => params.put(t._1, t._2.asInstanceOf[Any]))
   }
+  //this assumes that you know what you are doing when asking for a parameter of a specific type
   def parameters[T](key:String):T = params(key).asInstanceOf[T]
   def add(t: (String, _)) = params.put(t._1, t._2.asInstanceOf[Any])
   def print() = for (key <- params.keySet.toList.sorted) println(key + " " + params(key))
@@ -174,6 +171,7 @@ trait Parameters {
 abstract class Reader extends Pipeline with Parameters {
   def read:Corpus = read(parameters[String]("path"))
   def read(path:String):Corpus
+  //maybe just do nothing?
   override def process(doc:Document) = throw new IllegalArgumentException("A reader does not process documents!")
 }
 
@@ -185,23 +183,17 @@ trait Span extends Annotation {
   //TODO: def prepend
   //TODO: def trimStart
   //TODO: def trimEnd
-  def enclosingText:String = {
-    parent match {
-      case span:Span => span.text
-      case doc:Document => doc.text
-    }
+  def enclosingText:String = parent match {
+    case span:Span => span.text
+    case doc:Document => doc.text
   }
-  def startInDoc:Int = {
-    parent match {
-      case span:Span => span.startInDoc + start
-      case doc:Document => start
-    }
+  def startInDoc:Int = parent match {
+    case span:Span => span.startInDoc + start
+    case doc:Document => start
   }
-  def endInDoc:Int = {
-    parent match {
-      case span:Span => span.startInDoc + end
-      case doc:Document => end
-    }
+  def endInDoc:Int = parent match {
+    case span:Span => span.startInDoc + end
+    case doc:Document => end
   }
   def covered[T <: Span](implicit mf: Manifest[T]) = doc.coveredSpans[T](startInDoc, endInDoc)
   def text = doc.text.substring(startInDoc, endInDoc+1)
@@ -217,21 +209,21 @@ case class Sentence(start: Int, end: Int) extends Span with ParentOf[Annotation]
   def tokens = children[Token]
   def entities = children[Entity]
   def relations = children[Relation]
-  private var numberOfTokens = 0
+  private var numTokens = 0
   override def add(child: Annotation) = {
-    if (child.isInstanceOf[Token]) {
-      child.asInstanceOf[Token].index = numberOfTokens
-      numberOfTokens += 1
+    child match {
+      case token:Token => {
+        token.index = numTokens
+        numTokens += 1
+      }
+      case _ => //proceed
     }
     super.add(child)
   }
-  def overlapping[T <: Span](span: T)(implicit mf: Manifest[T]) = {
-    children[T].filter((t:T) => {
-      !(span.end < t.start || span.start > t.end)
-    })
-  }
+  def overlapping[T <: Span](span: T)(implicit mf: Manifest[T]) =
+    children[T].filter((t:T) => !(span.end < t.start || span.start > t.end))
   def preferLongerMatches(s1: Span, s2: Span) = s1.length > s2.length
-  //returns true iff span was added   ü
+  //returns true iff span was added
   def addAndResolveOverlaps[T <: Span](span: T, resolver:(T,T) => Boolean)(implicit mf: Manifest[T]):Boolean = {
     val overlaps = overlapping[T](span)
     if (overlaps.isEmpty) {
