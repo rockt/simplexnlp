@@ -50,19 +50,18 @@ trait ParentOf[C <: Child] {
   private def deepCopy[A](a: A)(implicit m: reflect.Manifest[A]): A = util.Marshal.load[A](util.Marshal.dump(a))
   //slow but beautiful
   def copy(implicit m: reflect.Manifest[this.type]):this.type = deepCopy[this.type](this)
-  def copyAndFilter[T <: ScalaObject](types: T*):this.type = {
+  def copyAndFilter[T <: ScalaObject](types: T*)(implicit m: scala.reflect.Manifest[T]):this.type = {
     val temp = this.copy
     temp.removeChildrenByTypes(types: _*)
     temp
   }
-  def removeChildrenByTypes[T <: ScalaObject](types: T*): Unit = {
+  def removeChildrenByTypes[T <: ScalaObject](types: T*)(implicit m: scala.reflect.Manifest[T]): Unit =
     for (child <- childrenBuffer)
-      child match {
+      if (types.exists(_.getClass.getName.dropRight(1) == child.getClass.getName)) this - child
+      else child match {
         case parent:ParentOf[_] => parent.removeChildrenByTypes(types: _*)
-        //FIXME: this comparison is not safe at all!
-        case _ => if (types.exists(_.toString == getClassName(child))) this - child
+        case _ => //keep annotation
       }
-  }
 }
 
 //something that has a parent
@@ -257,6 +256,7 @@ case class MicroAvgResult(results:List[Result]) extends Result(
   def +(that: MicroAvgResult) = MicroAvgResult(this.results ++ that.results)
 }
 
+//TODO: find a better way than calling constructor with dummy objects
 case class MacroAvgResult(results:List[Result]) extends Result(1, 0, 0) {
   override lazy val P = mean(_.P)
   override lazy val R = mean(_.R)
