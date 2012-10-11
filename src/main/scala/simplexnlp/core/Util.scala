@@ -30,4 +30,6 @@ object Util {
   //TODO: getAnnotationsEndingAt(end: Int)
   //TODO: getAnnotationsEndingBefore(end: Int)
   //TODO: getAnnotationsWithin(s: Span) = getAnnotationsWithin(s.start, s.end)
+
+  def deepCopy[A](a: A)(implicit m: reflect.Manifest[A]): A = util.Marshal.load[A](util.Marshal.dump(a))
 }
