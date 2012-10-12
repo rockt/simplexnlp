@@ -61,11 +61,14 @@ class NEREvaluator[T <: Entity](implicit mf: Manifest[T]) extends Evaluator {
   override def evaluate(gold: Sentence, predicted: Sentence) {
     val goldEntities = gold.children[T]
     val predictedEntities = predicted.children[T]
+    println("gold:      " + goldEntities)
+    println("predicted: " + predictedEntities)
     val currentTP = goldEntities.filter((g:T) => predictedEntities.exists((p:T) => same(g, p))).size
     val currentFP = predictedEntities.filter((p:T) => !goldEntities.exists((g:T) => same(g, p))).size
     val currentFN = goldEntities.filter((g:T) => !predictedEntities.exists((p:T) => same(g, p))).size
     assert(currentTP + currentFP == predictedEntities.size)
     assert(currentTP + currentFN == goldEntities.size)
+    TP += currentTP
     FP += currentFP
     FN += currentFN
   }
