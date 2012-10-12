@@ -1,9 +1,10 @@
 package simplexnlp.core
 
 case class Result(TP: Int, FP: Int, FN: Int) {
-  lazy val P = TP.toDouble/(TP + FP)
-  lazy val R = TP.toDouble/(TP + FN)
-  lazy val F1 = (2 * P * R)/(P + R)
+  private def catchNaN(d: Double)(to: Double) = if (d.isNaN) to else d
+  val P = catchNaN(TP.toDouble/(TP + FP))(1)
+  val R = catchNaN(TP.toDouble/(TP + FN))(0)
+  val F1 = (2 * P * R)/(P + R)
   def print() {
     println("TP\tFP\tFN\tP\tR\tF1")
     println(toString)
@@ -11,23 +12,26 @@ case class Result(TP: Int, FP: Int, FN: Int) {
   override def toString = "%d\t%d\t%d\t%.4f\t%.4f\t%.4f".format(TP, FP, FN, P, R, F1)
 }
 
-case class MicroAvgResult(results:List[Result]) extends Result(
+abstract class AggregateResult(results:List[Result]) extends Result(
   results.map(_.TP).sum,
   results.map(_.FP).sum,
   results.map(_.FN).sum
-) {
+)
+
+//TODO: prevent doubled implementation of def +
+case class MicroAvgResult(results:List[Result]) extends AggregateResult(results) {
   def +(that: MicroAvgResult) = MicroAvgResult(this.results ++ that.results)
 }
 
-//TODO: find a better way than calling constructor with dummy objects
-case class MacroAvgResult(results:List[Result]) extends Result(1, 0, 0) {
-  override lazy val P = mean(_.P)
-  override lazy val R = mean(_.R)
-  override lazy val F1 = mean(_.F1)
+case class MacroAvgResult(results:List[Result]) extends AggregateResult(results) {
+  override val P = mean(_.P)
+  override val R = mean(_.R)
+  override val F1 = mean(_.F1)
   def mean(mapping: Result => Double) = results.map(mapping).sum/results.size
   def variance(mapping: Result => Double) = results.map(mapping).map(_ - mapping(this.asInstanceOf[Result])).map(math.pow(_, 2)).sum
   def sd(mapping: Result => Double) = math.sqrt(variance(mapping))
   def +(that: MacroAvgResult) = MacroAvgResult(this.results ++ that.results)
+  override def toString = super.toString + "\tvar: %.2f\tsd: %.2f".format(variance(_.F1), sd(_.F1))
 }
 
 //TODO: implement nested relations
