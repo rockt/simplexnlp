@@ -1,15 +1,18 @@
 package simplexnlp.core
 
+import simplexnlp.core.Util._
+
 case class Result(TP: Int, FP: Int, FN: Int) {
   private def catchNaN(d: Double)(to: Double) = if (d.isNaN) to else d
-  val P = catchNaN(TP.toDouble/(TP + FP))(1)
-  val R = catchNaN(TP.toDouble/(TP + FN))(0)
-  val F1 = (2 * P * R)/(P + R)
+  val P = round(catchNaN(TP.toDouble/(TP + FP))(1))(4)
+  val R = round(catchNaN(TP.toDouble/(TP + FN))(0))(4)
+  val F1 = round((2 * P * R)/(P + R))(4)
   def print() {
-    println("TP\tFP\tFN\tP\tR\tF1")
+    println("TP\tFP\tFN\tP\tR\tF1\tSD")
     println(toString)
   }
-  override def toString = "%d\t%d\t%d\t%.4f\t%.4f\t%.4f".format(TP, FP, FN, P, R, F1)
+  override def toString = "%d\t%d\t%d\t%.4f\t%.4f\t%.4f\t%.2f".format(TP, FP, FN, P, R, F1, sd)
+  val sd = 0.0
 }
 
 abstract class AggregateResult(results:List[Result]) extends Result(
@@ -29,9 +32,9 @@ case class MacroAvgResult(results:List[Result]) extends AggregateResult(results)
   override val F1 = mean(_.F1)
   def mean(mapping: Result => Double) = results.map(mapping).sum/results.size
   def variance(mapping: Result => Double) = results.map(mapping).map(_ - mapping(this.asInstanceOf[Result])).map(math.pow(_, 2)).sum
-  def sd(mapping: Result => Double) = math.sqrt(variance(mapping))
+  def sd(mapping: Result => Double):Double = math.sqrt(variance(mapping))
   def +(that: MacroAvgResult) = MacroAvgResult(this.results ++ that.results)
-  override def toString = super.toString + "\tvar: %.2f\tsd: %.2f".format(variance(_.F1), sd(_.F1))
+  override val sd:Double = round(sd(_.F1))(2)
 }
 
 //TODO: implement nested relations

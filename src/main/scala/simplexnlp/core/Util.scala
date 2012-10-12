@@ -6,6 +6,11 @@ import java.util.Random
 object Util {
   def random = new Random(1337)
 
+  def round(d: Double)(p: Int): Double = {
+    val t = math pow (10, p)
+    (math rint d * t) / t
+  }
+
   def suppressConsoleOutput(body: => Any) = {
     val temp = System.err
     System.setErr(new PrintStream(new ByteArrayOutputStream()))
