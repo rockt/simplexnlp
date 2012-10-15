@@ -82,7 +82,8 @@ trait Annotation extends Child {
 class Document(val id: String, val text: String) extends Annotation with ParentOf[Annotation] {
   override def doc = this
   def sentences = children[Sentence]
-  def coveredSpans[T <: Span](start:Int, end:Int)(implicit mf: Manifest[T]):List[T] = descendants[T].filter((s:T) => (s.startInDoc >= start && s.endInDoc <= end))
+  def coveredSpans[T <: Span](start:Int, end:Int)(implicit mf: Manifest[T]): List[T] =
+    descendants[T].filter((s:T) => (s.startInDoc >= start && s.endInDoc <= end))
 }
 
 class Corpus extends ArrayBuffer[Document] {
@@ -217,7 +218,8 @@ case class Sentence(start: Int, end: Int) extends Span with ParentOf[Annotation]
     else if (overlaps.forall(resolver(span, _))) { overlaps.foreach(this - _); this + span; true }
     else false
   }
-  def addAndResolveOverlaps[T <: Span](span: T)(implicit mf: Manifest[T]):Boolean = addAndResolveOverlaps[T](span, preferLongerMatches _)
+  def addAndResolveOverlaps[T <: Span](span: T)(implicit mf: Manifest[T]): Boolean =
+    addAndResolveOverlaps[T](span, preferLongerMatches _)
 }
 
 case class Token(start: Int, end: Int) extends NonOverlappingSpan {
