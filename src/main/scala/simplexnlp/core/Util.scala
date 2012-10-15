@@ -11,12 +11,26 @@ object Util {
     (math rint d * t) / t
   }
 
-  def suppressConsoleOutput(body: => Any) = {
-    val temp = System.err
-    System.setErr(new PrintStream(new ByteArrayOutputStream()))
-    body
-    System.setErr(temp)
-  }
+  val enableSuppressing = true //FIXME: use Config parameter instead
+  def suppressConsoleOutput(body: => Any) =
+    if (enableSuppressing) {
+      val tempErr = System.err
+      val tempOut = System.out
+      val nirvana = new PrintStream(new ByteArrayOutputStream())
+      System.setErr(nirvana)
+      System.setOut(nirvana)
+      body
+      System.setErr(tempErr)
+      System.setOut(tempOut)
+    } else body
+
+  def suppressLoggerOutput() =
+    if (enableSuppressing) {
+      import java.util.logging._
+      LogManager.getLogManager.reset()
+      val globalLogger = Logger.getLogger(java.util.logging.Logger.GLOBAL_LOGGER_NAME)
+      globalLogger.setLevel(java.util.logging.Level.OFF)
+    }
 
   def getClassName(a: Any) = a.getClass.toString.substring(a.getClass.toString.lastIndexOf('.') + 1)
 
