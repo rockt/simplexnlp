@@ -13,18 +13,18 @@ case class Gene(start: Int, end: Int) extends NonOverlappingEntity
 case class Disease(start: Int, end: Int) extends NonOverlappingEntity
 case class Drug(start: Int, end: Int) extends NonOverlappingEntity
 
-case class PPI(a: Gene, b: Gene) extends Relation(a, b) {
+case class PPI(a: Gene, b: Gene) extends BinaryRelation(a, b) {
   override def toString: String = "PPI: " + a + " - " + b
 }
-case class DDI(a: Drug, b: Drug) extends Relation(a, b) {
+case class DDI(a: Drug, b: Drug) extends BinaryRelation(a, b) {
   override def toString: String = "DDI: " + a + " - " + b
 }
-case class MutationDiseaseRelation(m: Mutation, d: Disease) extends Relation(m, d) {
-  override def toString: String = "MDI: " + m + " - " + d
+case class MutationDiseaseRelation(mutation: Mutation, disease: Disease) extends BinaryRelation(mutation, disease) {
+  override def toString: String = "MDI: " + mutation + " - " + disease
 }
 
-case class GeneDiseaseRelation(g: Gene, d: Disease) extends Relation(g, d) {
-  override def toString: String = "GDI: " + g + " - " + d + " => " + text
+case class GeneDiseaseRelation(gene: Gene, disease: Disease) extends BinaryRelation(gene, disease) {
+  override def toString: String = "GDI: " + gene + " - " + disease + " => " + text
 }
 
 case class Sentence(override val start: Int, override val end: Int) extends GenericSentence(start, end) {

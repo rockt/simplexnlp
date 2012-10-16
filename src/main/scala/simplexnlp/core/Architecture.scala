@@ -134,9 +134,13 @@ class Pipeline(val components: Component*) {
       }
     })
   }
-  def process():Unit = {
+  def process():Corpus = {
     components.head match {
-      case r: Reader => r.read.foreach(process(_))
+      case r: Reader => {
+        val corpus = r.read
+        corpus.foreach(process(_))
+        corpus
+      }
       case _ => throw new IllegalArgumentException("The first component has to be a Reader if you want to use this method!")
     }
   }
@@ -159,7 +163,8 @@ trait Parameters {
   def hashId = params.values.mkString(".").hashCode
 }
 
-abstract class Reader extends Pipeline with Parameters {
+abstract class Reader extends Component with Parameters {
+  def ++(that: Pipeline) = new Pipeline((List(this) ++ that.components): _*)
   def read:Corpus = read(parameters[String]("path"))
   def read(path:String):Corpus
   //maybe just do nothing?
@@ -234,4 +239,9 @@ abstract class Relation(entities: Entity*) extends Span {
   //TODO: a relation might have a trigger word
   override val start = entities.sortBy(_.startInDoc).head.start
   override val end = entities.sortBy(_.endInDoc).last.end
+}
+
+abstract class BinaryRelation(a: Entity, b: Entity) extends Relation(a, b) {
+  val _1 = if (a.start <= b.start) a else b
+  val _2 = if (a.start > b.start) a else b
 }
