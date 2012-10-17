@@ -140,7 +140,7 @@ class WhiteSpaceTokenizer extends Component {
 }
 
 class DummyDiseaseAnnotator extends Component {
-  val DISEASE = "disease"
+  val DISEASE = "Alzheimer's disease"
   override def process(doc: Document) = {
     for (sentence <- doc.sentences) {
       val position = sentence.text.indexOf(DISEASE)

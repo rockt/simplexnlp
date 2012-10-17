@@ -51,4 +51,40 @@ object Util {
   //TODO: getAnnotationsWithin(s: Span) = getAnnotationsWithin(s.start, s.end)
 
   def deepCopy[A](a: A)(implicit m: reflect.Manifest[A]): A = util.Marshal.load[A](util.Marshal.dump(a))
+
+  class Timer {
+    def current = System.currentTimeMillis
+    private val start0 = current
+    private var start = start0
+    def diff(time: Long) = current - time
+    def diff = current - start
+    def stop = {
+      val temp = diff
+      start = current
+      temp
+    }
+    //TODO: should find best formatting on his own
+    def report(): String = report("s")
+    def report(format: String): String = report(diff, format)
+    def reportStop(format: String): String = report(stop, format)
+    def reportTotal(format: String): String = report(total, format)
+    def report(ms: Long): String = report(ms, "%1.0fms")
+    def report(ms: Long, format: String): String = {
+      if (format.matches("ms|s|m|h|d|w")) report(ms, "%1.0f" + format)
+      else {
+        def report0(time: Double, format: String): Double = format match {
+          case "ms" => time
+          case "s" => report0(time/1000, "ms")
+          case "m" => report0(time/60, "s")
+          case "h" => report0(time/60, "m")
+          case "d" => report0(time/24, "h")
+          case "w" => report0(time/7, "d")
+          case _ => report0(time, "ms")
+        }
+        format.format(report0(ms, format.takeRight(if(format.endsWith("ms")) 2 else 1)))
+      }
+    }
+    def reset() { start = current }
+    def total = diff(start0)
+  }
 }

@@ -72,8 +72,8 @@ trait Annotation extends Child {
   //get the document (root ancestor)
   def doc: Document = {
     parent match {
-      case doc:Document => doc
-      case annot:Annotation => annot.doc
+      case doc: Document => doc
+      case annot: Annotation => annot.doc
     }
   }
 }
@@ -241,7 +241,9 @@ abstract class Relation(entities: Entity*) extends Span {
   override val end = entities.sortBy(_.endInDoc).last.end
 }
 
-abstract class BinaryRelation(a: Entity, b: Entity) extends Relation(a, b) {
-  val _1 = if (a.start <= b.start) a else b
-  val _2 = if (a.start > b.start) a else b
+abstract class BinaryRelation(var _1: Entity, var _2: Entity) extends Relation(_1, _2) {
+  private val temp1 = _1
+  private val temp2 = _2
+  _1 = if (temp1.start <= temp2.start) temp1 else temp2
+  _2 = if (temp1.start > temp2.start) temp2 else temp1
 }
