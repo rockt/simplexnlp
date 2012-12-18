@@ -2,10 +2,13 @@ package simplexnlp.example
 
 import simplexnlp.core._
 import simplexnlp.core.{Sentence => GenericSentence}
-import opennlp.tools.sentdetect.{SentenceModel, SentenceDetectorME}
-import java.io.FileInputStream
+import opennlp.tools.sentdetect.SentenceDetectorME
+import java.io.{DataInputStream, FileInputStream}
 import simplexnlp.example.Implicits._
-import opennlp.tools.postag.{POSModel, POSTaggerME}
+import opennlp.tools.postag.POSTaggerME
+import opennlp.maxent.io.BinaryGISModelReader
+
+import opennlp.tools.dictionary.Dictionary
 
 //example NLP pipeline
 case class Mutation(start: Int, end: Int) extends NonOverlappingEntity
@@ -36,12 +39,22 @@ case class Sentence(override val start: Int, override val end: Int) extends Gene
 class SentenceAnnotator extends Component with Parameters {
   var tagger:SentenceDetectorME = _
   override def initialize {
-    tagger = new SentenceDetectorME(new SentenceModel(new FileInputStream(parameters[String]("path"))))
+    //tagger = new SentenceDetectorME(new SentenceModel(new FileInputStream(parameters[String]("path"))))
+    val modelReader = new BinaryGISModelReader(new DataInputStream(new FileInputStream(parameters[String]("path"))))
+    tagger = new SentenceDetectorME(modelReader.getModel)
   }
   override def process(doc: Document) {
+/*
     val spans = tagger.sentPosDetect(doc.text)
     for (span: opennlp.tools.util.Span <- spans) {
       doc + Sentence(span.getStart, span.getEnd-1)
+    }
+*/
+    val positions = tagger.sentPosDetect(doc.text)
+    var last = 0
+    for (position <- positions) {
+      doc + Sentence(last, position - 1)
+      last = position
     }
   }
 }
@@ -49,7 +62,9 @@ class SentenceAnnotator extends Component with Parameters {
 class POSTagger extends Component with Parameters {
   var tagger:POSTaggerME = _
   override def initialize {
-    tagger = new POSTaggerME(new POSModel(new FileInputStream(parameters[String]("path"))))
+    //tagger = new POSTaggerME(new POSModel(new FileInputStream(parameters[String]("path"))))
+    val modelReader = new BinaryGISModelReader(new DataInputStream(new FileInputStream(parameters[String]("path"))))
+    tagger = new POSTaggerME(modelReader.getModel, null.asInstanceOf[Dictionary])
   }
   override def process(doc: Document) {
     for (sentence <- doc.sentences) {

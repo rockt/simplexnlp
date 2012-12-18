@@ -16,10 +16,26 @@
             <scope>system</scope>
             <systemPath>${basedir}/lib/jakarta-oro-2.0.8.jar</systemPath>
         </dependency>
+<!--
         <dependency>
           <groupId>org.apache.opennlp</groupId>
           <artifactId>opennlp-tools</artifactId>
           <version>1.5.2-incubating</version>
+        </dependency>
+-->
+        <dependency>
+            <groupId>opennlp</groupId>
+            <artifactId>opennlp-tools</artifactId>
+            <version>2012-12-18</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/opennlp-tools-1.4.3.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>maxent</groupId>
+            <artifactId>maxent</artifactId>
+            <version>2012-12-18</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/maxent-2.5.2.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
