@@ -60,6 +60,19 @@ trait ParentOf[C <: Child] {
         case parent:ParentOf[_] => parent.removeChildrenByTypes(types: _*)
         case _ => //keep annotation
       }
+  def overlapping[T <: Span](span: T)(implicit mf: Manifest[T]) =
+    children[T].filter((t:T) => !(span.end < t.start || span.start > t.end))
+  def preferLongerMatches(s1: Span, s2: Span) = s1.length > s2.length
+  def preferSmallerMatches(s1: Span, s2: Span) = s1.length < s2.length
+  //returns true iff span was added
+  def addAndResolveOverlaps[T <: Span](span: T, resolver:(T,T) => Boolean)(implicit mf: Manifest[T]):Boolean = {
+    val overlaps = overlapping[T](span)
+    if (overlaps.isEmpty) { this + span.asInstanceOf[C]; true }
+    else if (overlaps.forall(resolver(span, _))) { overlaps.foreach(this - _.asInstanceOf[C]); this + span.asInstanceOf[C]; true }
+    else false
+  }
+  def addAndResolveOverlaps[T <: Span](span: T)(implicit mf: Manifest[T]): Boolean =
+    addAndResolveOverlaps[T](span, preferLongerMatches _)
 }
 
 //something that has a parent
@@ -213,18 +226,6 @@ case class Sentence(start: Int, end: Int) extends Span with ParentOf[Annotation]
     }
     super.add(child)
   }
-  def overlapping[T <: Span](span: T)(implicit mf: Manifest[T]) =
-    children[T].filter((t:T) => !(span.end < t.start || span.start > t.end))
-  def preferLongerMatches(s1: Span, s2: Span) = s1.length > s2.length
-  //returns true iff span was added
-  def addAndResolveOverlaps[T <: Span](span: T, resolver:(T,T) => Boolean)(implicit mf: Manifest[T]):Boolean = {
-    val overlaps = overlapping[T](span)
-    if (overlaps.isEmpty) { this + span; true }
-    else if (overlaps.forall(resolver(span, _))) { overlaps.foreach(this - _); this + span; true }
-    else false
-  }
-  def addAndResolveOverlaps[T <: Span](span: T)(implicit mf: Manifest[T]): Boolean =
-    addAndResolveOverlaps[T](span, preferLongerMatches _)
 }
 
 case class Token(start: Int, end: Int) extends NonOverlappingSpan {

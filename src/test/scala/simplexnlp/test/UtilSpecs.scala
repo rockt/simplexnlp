@@ -4,7 +4,7 @@ import org.scalatest.{GivenWhenThen, FunSpec}
 import org.scalatest.matchers.ShouldMatchers
 import com.codahale.logula.Logging
 import org.apache.log4j.Level
-import simplexnlp.core.Util.Timer
+import simplexnlp.core.Timer
 
 /**
  * User: Tim Rocktaeschel
