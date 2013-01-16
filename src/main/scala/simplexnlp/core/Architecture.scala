@@ -67,7 +67,7 @@ trait ParentOf[C <: Child] {
   //returns true iff span was added
   def addAndResolveOverlaps[T <: Span](span: T, resolver:(T,T) => Boolean)(implicit mf: Manifest[T]):Boolean = {
     val overlaps = overlapping[T](span)
-    if (overlaps.isEmpty) { this + span.asInstanceOf[C]; true }
+    if (overlaps.isEmpty) { this + span.asInstanceOf[C]; true } //FIXME: this type-casting is ugly
     else if (overlaps.forall(resolver(span, _))) { overlaps.foreach(this - _.asInstanceOf[C]); this + span.asInstanceOf[C]; true }
     else false
   }

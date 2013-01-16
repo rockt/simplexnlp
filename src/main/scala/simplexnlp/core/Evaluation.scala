@@ -44,7 +44,9 @@ abstract class Evaluator {
   var TP, FP, FN = 0
   var result:Result = _
   def evaluate(gold: Sentence, predicted: Sentence) //concrete class needs to provide an implementation
-  def evaluate(goldCorpus:Corpus, predictedCorpus:Corpus):Result = {
+  def evaluate(goldCorpus:Corpus, predictedCorpus:Corpus):Result =
+    evaluate(goldCorpus.toArray, predictedCorpus.toArray)
+  def evaluate(goldCorpus:Array[Document], predictedCorpus:Array[Document]):Result = {
     require(goldCorpus.size == predictedCorpus.size)
     val gold = goldCorpus.sortBy(_.id)
     val predicted = predictedCorpus.sortBy(_.id)
@@ -73,6 +75,12 @@ class NEREvaluator[T <: Entity](implicit mf: Manifest[T]) extends Evaluator {
     val currentFN = goldEntities.filter((g:T) => !predictedEntities.exists((p:T) => same(g, p))).size
     assert(currentTP + currentFP == predictedEntities.size)
     assert(currentTP + currentFN == goldEntities.size)
+
+    //if (currentFP > 0)
+      //println(predictedEntities.filter((p:T) => !goldEntities.exists((g:T) => same(g, p))).mkString("FP: ","\nFP: ",""))
+    //if (currentFN > 0)
+      //println(goldEntities.filter((g:T) => !predictedEntities.exists((p:T) => same(g, p))).mkString("FN: ","\nFN: ",""))
+
     TP += currentTP
     FP += currentFP
     FN += currentFN
