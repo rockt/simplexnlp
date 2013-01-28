@@ -233,7 +233,10 @@ case class Token(start: Int, end: Int) extends NonOverlappingSpan {
   var index = 0
 }
 
-trait Entity extends Span { var id = "" }
+trait Entity extends Span {
+  var id = ""
+  def className:String = this.getClass.getName.substring(this.getClass.getName.lastIndexOf('.') + 1)
+}
 trait NonOverlappingEntity extends Entity with NonOverlappingSpan
 
 abstract class Relation(entities: Entity*) extends Span {

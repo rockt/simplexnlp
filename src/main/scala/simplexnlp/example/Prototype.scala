@@ -177,3 +177,10 @@ class CoOccurrenceAnnotator extends Component {
     }
   }
 }
+
+object Prototype extends App {
+  val doc = new Document("0", "test")
+  val d = Disease(0,3)
+  doc + d
+  println(d.className)
+}
