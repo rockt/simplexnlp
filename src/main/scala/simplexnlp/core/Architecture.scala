@@ -233,7 +233,10 @@ case class Token(start: Int, end: Int) extends NonOverlappingSpan {
   var index = 0
 }
 
-trait Entity extends Span {
+case class Entity extends Span {
+  //TODO: not very nice, but works for filtering descendants by class
+  override val start = 0
+  override val end = 0
   var id = ""
   def className:String = this.getClass.getName.substring(this.getClass.getName.lastIndexOf('.') + 1)
 }

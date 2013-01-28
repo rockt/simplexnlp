@@ -11,10 +11,15 @@ import opennlp.maxent.io.BinaryGISModelReader
 import opennlp.tools.dictionary.Dictionary
 
 //example NLP pipeline
-case class Mutation(start: Int, end: Int) extends NonOverlappingEntity
-case class Gene(start: Int, end: Int) extends NonOverlappingEntity
-case class Disease(start: Int, end: Int) extends NonOverlappingEntity
-case class Drug(start: Int, end: Int) extends NonOverlappingEntity
+case class Mutation (override val start: Int, override val end: Int) extends NonOverlappingEntity
+case class Gene     (override val start: Int, override val end: Int) extends NonOverlappingEntity
+case class Disease  (override val start: Int, override val end: Int) extends NonOverlappingEntity
+case class Chemical (override val start: Int, override val end: Int) extends NonOverlappingEntity
+//DDI extraction task 2013 format
+case class Drug     (override val start: Int, override val end: Int) extends NonOverlappingEntity
+case class DrugN    (override val start: Int, override val end: Int) extends NonOverlappingEntity
+case class Brand    (override val start: Int, override val end: Int) extends NonOverlappingEntity
+case class Group    (override val start: Int, override val end: Int) extends NonOverlappingEntity
 
 case class PPI(a: Gene, b: Gene) extends BinaryRelation(a, b) {
   override def toString: String = "PPI: " + a + " - " + b
