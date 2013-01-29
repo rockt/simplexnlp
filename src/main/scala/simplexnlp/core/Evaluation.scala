@@ -1,6 +1,11 @@
 package simplexnlp.core
 
 import simplexnlp.core.Util._
+import simplexnlp.example._
+import simplexnlp.example.Group
+import simplexnlp.example.Drug
+import simplexnlp.example.DrugN
+import simplexnlp.example.Brand
 
 case class Result(TP: Int, FP: Int, FN: Int) {
   private def catchNaN(d: Double)(to: Double) = if (d.isNaN) to else d
@@ -84,5 +89,28 @@ class NEREvaluator[T <: Entity](implicit mf: Manifest[T]) extends Evaluator {
     TP += currentTP
     FP += currentFP
     FN += currentFN
+  }
+}
+
+//FIXME: buggy
+class MultiClassNEREvaluator {
+  def evaluate(gold: Corpus, predicted: Corpus):List[(String, Result)] = {
+    println(gold.map(_.descendants[Entity].size).sum)
+    println(predicted.map(_.descendants[Entity].size).sum)
+    //FIXME: dirty, pass this as argument!
+    val evaluator = new NEREvaluator[Entity]
+    val evaluatorDrug = new NEREvaluator[Drug]
+    val evaluatorDrugN = new NEREvaluator[DrugN]
+    val evaluatorGroup = new NEREvaluator[Group]
+    val evaluatorBrand = new NEREvaluator[Brand]
+    val evaluatorDisease = new NEREvaluator[Disease]
+    List(
+      ("All",   evaluator.evaluate(gold, predicted)),
+      ("Drug",  evaluatorDrug.evaluate(gold, predicted)),
+      ("DrugN", evaluatorDrugN.evaluate(gold, predicted)),
+      ("Group", evaluatorGroup.evaluate(gold, predicted)),
+      ("Brand", evaluatorBrand.evaluate(gold, predicted)),
+      ("Disease", evaluatorDisease.evaluate(gold, predicted))
+    )
   }
 }
