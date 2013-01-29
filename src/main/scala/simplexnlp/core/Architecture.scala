@@ -71,15 +71,13 @@ trait ParentOf[C <: Child] {
     else if (overlaps.forall(resolver(span, _))) { overlaps.foreach(this - _.asInstanceOf[C]); this + span.asInstanceOf[C]; true }
     else false
   }
-  def addAndResolveOverlaps[T <: Span](span: T)(implicit mf: Manifest[T]): Boolean = {
+  def addAndResolveOverlaps[T <: Span](span: T)(implicit mf: Manifest[T]): Boolean =
     addAndResolveOverlaps[T](span, preferLongerMatches _)
+  def addIfNotOverlapping[T <: Span](span: T)(implicit mf: Manifest[T]): Boolean = {
+    val overlaps = overlapping[T](span)
+    if (overlaps.isEmpty) { this + span.asInstanceOf[C]; true }
+    else false
   }
-
-//  def addIfNotOverlapping[T <: Span](span: T)(implicit mf: Manifest[T]): Boolean = {
-//    val overlaps = overlapping[T](span)
-//    if (overlaps.isEmpty) { this + span.asInstanceOf[C]; true }
-//    else false
-//  }
 }
 
 //something that has a parent
@@ -242,10 +240,7 @@ case class Token(start: Int, end: Int) extends NonOverlappingSpan {
   var index = 0
 }
 
-case class Entity extends Span {
-  //TODO: not very nice, but works for filtering descendants by class
-  override val start = 0
-  override val end = 0
+trait Entity extends Span {
   var id = ""
   def className:String = this.getClass.getName.substring(this.getClass.getName.lastIndexOf('.') + 1)
 }
