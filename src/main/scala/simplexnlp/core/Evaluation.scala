@@ -4,14 +4,14 @@ import simplexnlp.core.Util._
 
 case class Result(TP: Int, FP: Int, FN: Int) {
   private def catchNaN(d: Double)(to: Double) = if (d.isNaN) to else d
-  val P = round(catchNaN(TP.toDouble/(TP + FP))(1))(4)
-  val R = round(catchNaN(TP.toDouble/(TP + FN))(0))(4)
+  val P = if (FP == 0) 1 else round(catchNaN(TP.toDouble/(TP + FP))(1))(4)
+  val R = if (FN == 0) 1 else round(catchNaN(TP.toDouble/(TP + FN))(0))(4)
   val F1 = round((2 * P * R)/(P + R))(4)
   def print() {
     println("TP\tFP\tFN\tP\tR\tF1\tSD")
     println(toString)
   }
-  override def toString = "%d\t%d\t%d\t%.4f\t%.4f\t%.4f\t%.2f".format(TP, FP, FN, P, R, F1, sd)
+  override def toString = "%d\t%d\t%d\t%6.2f\t%6.2f\t%6.2f\t%.2f".format(TP, FP, FN, P*100, R*100, F1*100, sd)
   val sd = 0.0
 }
 

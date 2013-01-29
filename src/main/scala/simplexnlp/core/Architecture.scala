@@ -48,6 +48,7 @@ trait ParentOf[C <: Child] {
   def descendants[T](implicit mf: Manifest[T]):List[T] = filterByType[T](gatherDescendants)
   //slow but beautiful
   def copy(implicit m: reflect.Manifest[this.type]):this.type = deepCopy[this.type](this)
+  //TODO: find a more clever way which incorporates information about class inheritance
   def copyAndFilter[T <: ScalaObject](types: T*)(implicit m: scala.reflect.Manifest[T]):this.type = {
     val temp = this.copy
     temp.removeChildrenByTypes(types: _*)
