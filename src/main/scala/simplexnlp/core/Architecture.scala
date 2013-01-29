@@ -17,7 +17,7 @@ trait ParentOf[C <: Child] {
         type T = thiz.type
         require(descendants[T].forall((that:T) => thiz.end < that.start || thiz.start > that.end), {
           val overlap = descendants[T].find((that:T) => !(thiz.end < that.start || thiz.start > that.end)).get
-          "New span annotation [" + thiz.start + "-" + thiz.end + "]" + " overlaps with " + overlap + " in\n" + this
+          "New span annotation [" + thiz.start + "-" + thiz.end + "]" + " overlaps with " + overlap + "\n" + this
         })
       }
       case _ => //proceed
@@ -71,8 +71,15 @@ trait ParentOf[C <: Child] {
     else if (overlaps.forall(resolver(span, _))) { overlaps.foreach(this - _.asInstanceOf[C]); this + span.asInstanceOf[C]; true }
     else false
   }
-  def addAndResolveOverlaps[T <: Span](span: T)(implicit mf: Manifest[T]): Boolean =
+  def addAndResolveOverlaps[T <: Span](span: T)(implicit mf: Manifest[T]): Boolean = {
     addAndResolveOverlaps[T](span, preferLongerMatches _)
+  }
+
+//  def addIfNotOverlapping[T <: Span](span: T)(implicit mf: Manifest[T]): Boolean = {
+//    val overlaps = overlapping[T](span)
+//    if (overlaps.isEmpty) { this + span.asInstanceOf[C]; true }
+//    else false
+//  }
 }
 
 //something that has a parent
@@ -87,6 +94,8 @@ trait Annotation extends Child {
     parent match {
       case doc: Document => doc
       case annot: Annotation => annot.doc
+      case _ => throw new IllegalStateException(parent + ": a parent of an annotation can only refer to a document or " +
+        "to another annotation")
     }
   }
 }
