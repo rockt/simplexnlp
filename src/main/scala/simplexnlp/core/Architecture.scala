@@ -256,6 +256,7 @@ abstract class Relation(entities: Entity*) extends Span {
 abstract class BinaryRelation(var _1: Entity, var _2: Entity) extends Relation(_1, _2) {
   private val temp1 = _1
   private val temp2 = _2
+  var typ:String = _
   _1 = if (temp1.start <= temp2.start) temp1 else temp2
   _2 = if (temp1.start <= temp2.start) temp2 else temp1
 }

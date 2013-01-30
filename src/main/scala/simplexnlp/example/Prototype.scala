@@ -24,7 +24,7 @@ case class Group(override val start: Int, override val end: Int) extends Chemica
 case class PPI(a: Gene, b: Gene) extends BinaryRelation(a, b) {
   override def toString: String = "PPI: " + a + " - " + b
 }
-case class DDI(a: Drug, b: Drug) extends BinaryRelation(a, b) {
+case class DDI(a: Chemical, b: Chemical) extends BinaryRelation(a, b) {
   override def toString: String = "DDI: " + a + " - " + b
 }
 case class MutationDiseaseRelation(mutation: Mutation, disease: Disease) extends BinaryRelation(mutation, disease) {
