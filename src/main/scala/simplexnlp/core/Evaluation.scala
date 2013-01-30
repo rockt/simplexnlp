@@ -92,11 +92,8 @@ class NEREvaluator[T <: Entity](implicit mf: Manifest[T]) extends Evaluator {
   }
 }
 
-//FIXME: buggy
 class MultiClassNEREvaluator {
   def evaluate(gold: Corpus, predicted: Corpus):List[(String, Result)] = {
-    println(gold.map(_.descendants[Entity].size).sum)
-    println(predicted.map(_.descendants[Entity].size).sum)
     //FIXME: dirty, pass this as argument!
     val evaluator = new NEREvaluator[Entity]
     val evaluatorDrug = new NEREvaluator[Drug]
