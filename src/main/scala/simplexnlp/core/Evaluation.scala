@@ -69,7 +69,7 @@ abstract class Evaluator {
   }
 }
 
-class NEREvaluator[T <: Entity](implicit mf: Manifest[T]) extends Evaluator {
+class SpanEvaluator[T <: Span](implicit mf: Manifest[T]) extends Evaluator {
   //TODO: try soft bounds
   private def same(a:T, b:T):Boolean = a.start == b.start && a.end == b.end
   override def evaluate(gold: Sentence, predicted: Sentence) {
@@ -95,12 +95,12 @@ class NEREvaluator[T <: Entity](implicit mf: Manifest[T]) extends Evaluator {
 class MultiClassNEREvaluator {
   def evaluate(gold: Corpus, predicted: Corpus):List[(String, Result)] = {
     //FIXME: dirty, pass this as argument!
-    val evaluator = new NEREvaluator[Entity]
-    val evaluatorDrug = new NEREvaluator[Drug]
-    val evaluatorDrugN = new NEREvaluator[DrugN]
-    val evaluatorGroup = new NEREvaluator[Group]
-    val evaluatorBrand = new NEREvaluator[Brand]
-    val evaluatorDisease = new NEREvaluator[Disease]
+    val evaluator = new SpanEvaluator[Entity]
+    val evaluatorDrug = new SpanEvaluator[Drug]
+    val evaluatorDrugN = new SpanEvaluator[DrugN]
+    val evaluatorGroup = new SpanEvaluator[Group]
+    val evaluatorBrand = new SpanEvaluator[Brand]
+    val evaluatorDisease = new SpanEvaluator[Disease]
     List(
       ("All",   evaluator.evaluate(gold, predicted)),
       ("Drug",  evaluatorDrug.evaluate(gold, predicted)),

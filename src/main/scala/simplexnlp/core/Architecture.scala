@@ -259,4 +259,5 @@ abstract class BinaryRelation(var _1: Entity, var _2: Entity) extends Relation(_
   var typ:String = _
   _1 = if (temp1.start <= temp2.start) temp1 else temp2
   _2 = if (temp1.start <= temp2.start) temp2 else temp1
+  var hasParse = false //FIXME: remove this
 }

@@ -26,6 +26,7 @@ case class PPI(a: Gene, b: Gene) extends BinaryRelation(a, b) {
 }
 case class DDI(a: Chemical, b: Chemical) extends BinaryRelation(a, b) {
   override def toString: String = "DDI: " + a + " - " + b
+  var score = 0.0
 }
 case class MutationDiseaseRelation(mutation: Mutation, disease: Disease) extends BinaryRelation(mutation, disease) {
   override def toString: String = "MDI: " + mutation + " - " + disease
