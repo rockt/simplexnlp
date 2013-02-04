@@ -105,6 +105,7 @@ class Document(val id: String, val text: String) extends Annotation with ParentO
   def sentences = children[Sentence]
   def coveredSpans[T <: Span](start:Int, end:Int)(implicit mf: Manifest[T]): List[T] =
     descendants[T].filter((s:T) => (s.startInDoc >= start && s.endInDoc <= end))
+  var fold: Int = _
 }
 
 class Corpus extends ArrayBuffer[Document] {
@@ -131,6 +132,7 @@ class Corpus extends ArrayBuffer[Document] {
     val splits = round(temp.toList, parts)
     splits.map(_.toArray).toArray
   }
+  def getFold(fold: Int) = this.filter(_.fold == fold)
 }
 
 //TODO: implement Input und Output type specification
