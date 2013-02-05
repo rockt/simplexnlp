@@ -88,6 +88,7 @@ trait Child extends Serializable {
 
 //an annotation refers to a document and might be nested in another annotation
 trait Annotation extends Child {
+  var id:String = _
   //get the document (root ancestor)
   def doc: Document = {
     parent match {
@@ -100,7 +101,8 @@ trait Annotation extends Child {
 }
 
 //a document with a text and annotations
-class Document(val id: String, val text: String) extends Annotation with ParentOf[Annotation] {
+class Document(id2: String, val text: String) extends Annotation with ParentOf[Annotation] {
+  id = id2
   override def doc = this
   def sentences = children[Sentence]
   def coveredSpans[T <: Span](start:Int, end:Int)(implicit mf: Manifest[T]): List[T] =
@@ -244,7 +246,6 @@ case class Token(start: Int, end: Int) extends NonOverlappingSpan {
 }
 
 trait Entity extends Span {
-  var id = ""
   def className:String = this.getClass.getName.substring(this.getClass.getName.lastIndexOf('.') + 1)
 }
 trait NonOverlappingEntity extends Entity with NonOverlappingSpan
