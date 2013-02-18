@@ -111,3 +111,21 @@ class MultiClassNEREvaluator {
     )
   }
 }
+class MultiClassDDIEvaluator {
+  def evaluate(gold: Corpus, predicted: Corpus):List[(String, Result)] = evaluate(gold.toArray, predicted.toArray)
+  def evaluate(gold: Array[Document], predicted: Array[Document]):List[(String, Result)] = {
+    //FIXME: dirty, pass this as argument!
+    val evaluator = new SpanEvaluator[DDI]
+    val evaluatorEffect = new SpanEvaluator[DDIEffect]
+    val evaluatorAdvise = new SpanEvaluator[DDIAdvise]
+    val evaluatorMechanism = new SpanEvaluator[DDIMechanism]
+    val evaluatorInt = new SpanEvaluator[DDIInt]
+    List(
+      ("All",   evaluator.evaluate(gold, predicted)),
+      ("Effect",  evaluatorEffect.evaluate(gold, predicted)),
+      ("Advise", evaluatorAdvise.evaluate(gold, predicted)),
+      ("Mechanism", evaluatorMechanism.evaluate(gold, predicted)),
+      ("Int", evaluatorInt.evaluate(gold, predicted))
+    )
+  }
+}

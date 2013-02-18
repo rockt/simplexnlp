@@ -105,7 +105,13 @@ class Document(id: String, val text: String) extends Annotation with ParentOf[An
   override def doc = this
   def sentences = children[Sentence]
   def coveredSpans[T <: Span](start:Int, end:Int)(implicit mf: Manifest[T]): List[T] =
-    descendants[T].filter((s:T) => (s.startInDoc >= start && s.endInDoc <= end))
+    descendants[T].filter((s:T) =>
+      (s.startInDoc <= start && start < s.endInDoc) ||
+      (start <= s.startInDoc &&  s.endInDoc <= end) ||
+      (s.startInDoc <= end && end < s.endInDoc)
+    )
+  def includedSpans[T <: Span](start:Int, end:Int)(implicit mf: Manifest[T]): List[T] =
+    descendants[T].filter((s:T) => (start <= s.startInDoc && s.endInDoc <= end))
   var fold: Int = _
 }
 
@@ -258,7 +264,6 @@ abstract class Relation(entities: Entity*) extends Span {
 abstract class BinaryRelation(var _1: Entity, var _2: Entity) extends Relation(_1, _2) {
   private val temp1 = _1
   private val temp2 = _2
-  var typ:String = _
   _1 = if (temp1.start <= temp2.start) temp1 else temp2
   _2 = if (temp1.start <= temp2.start) temp2 else temp1
   var hasParse = false //FIXME: remove this

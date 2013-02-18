@@ -28,6 +28,12 @@ case class DDI(a: Chemical, b: Chemical) extends BinaryRelation(a, b) {
   override def toString: String = "DDI: " + a + " - " + b
   var score = 0.0
 }
+
+case class DDIEffect(override val a: Chemical, override val b: Chemical) extends DDI(a,b)
+case class DDIAdvise(override val a: Chemical, override val b: Chemical) extends DDI(a,b)
+case class DDIMechanism(override val a: Chemical, override val b: Chemical) extends DDI(a,b)
+case class DDIInt(override val a: Chemical, override val b: Chemical) extends DDI(a,b)
+
 case class MutationDiseaseRelation(mutation: Mutation, disease: Disease) extends BinaryRelation(mutation, disease) {
   override def toString: String = "MDI: " + mutation + " - " + disease
 }
