@@ -101,7 +101,8 @@ trait Annotation extends Child {
 }
 
 //a document with a text and annotations
-class Document(id: String, val text: String) extends Annotation with ParentOf[Annotation] {
+class Document(did: String, val text: String) extends Annotation with ParentOf[Annotation] {
+  id = did
   override def doc = this
   def sentences = children[Sentence]
   def coveredSpans[T <: Span](start:Int, end:Int)(implicit mf: Manifest[T]): List[T] =
