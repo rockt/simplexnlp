@@ -7,7 +7,7 @@ import org.apache.log4j.Level
 import simplexnlp.core.Timer
 
 /**
- * User: Tim Rocktaeschel
+ * User: rockt
  * Date: 10/17/12
  * Time: 4:34 PM
  */

@@ -43,6 +43,7 @@ case class GeneDiseaseRelation(gene: Gene, disease: Disease) extends BinaryRelat
 }
 
 case class Sentence(override val start: Int, override val end: Int) extends GenericSentence(start, end) {
+  var origId: String = _
   def genes = children[Gene]
   def mutations = children[Mutation]
   def diseases = children[Disease]

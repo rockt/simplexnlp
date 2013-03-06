@@ -92,7 +92,11 @@ class SpanEvaluator[T <: Span](implicit mf: Manifest[T]) extends Evaluator {
   }
 }
 
-class MultiClassNEREvaluator {
+abstract class MultiClassEvaluator {
+  def evaluate(gold: Corpus, predicted: Corpus):List[(String, Result)]
+}
+
+class MultiClassNEREvaluator extends MultiClassEvaluator {
   def evaluate(gold: Corpus, predicted: Corpus):List[(String, Result)] = {
     //FIXME: dirty, pass this as argument!
     val evaluator = new SpanEvaluator[Entity]
@@ -111,7 +115,7 @@ class MultiClassNEREvaluator {
     )
   }
 }
-class MultiClassDDIEvaluator {
+class MultiClassDDIEvaluator extends MultiClassEvaluator  {
   def evaluate(gold: Corpus, predicted: Corpus):List[(String, Result)] = evaluate(gold.toArray, predicted.toArray)
   def evaluate(gold: Array[Document], predicted: Array[Document]):List[(String, Result)] = {
     //FIXME: dirty, pass this as argument!
