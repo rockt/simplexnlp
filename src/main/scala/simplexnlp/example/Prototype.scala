@@ -13,7 +13,11 @@ import opennlp.tools.dictionary.Dictionary
 //example NLP pipeline
 case class Mutation(start: Int, end: Int) extends NonOverlappingEntity
 case class Gene(start: Int, end: Int) extends NonOverlappingEntity
-case class Disease(start: Int, end: Int) extends NonOverlappingEntity
+case class Disease(start: Int, end: Int) extends NonOverlappingEntity {
+  var umls: String = _
+  var lddb: String = _
+  var hpo: String = _
+}
 case class Chemical(start: Int, end: Int) extends NonOverlappingEntity
 //DDI extraction 2013 task format
 case class Drug(override val start: Int, override val end: Int) extends Chemical(start, end)
